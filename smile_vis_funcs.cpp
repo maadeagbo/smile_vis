@@ -1,5 +1,7 @@
 // level script for smile_vis cpp implementations
 #include "ddLevelPrototype.h"
+#include "svis_shader_enums.h"
+#include "smile_vis_graphics.h"
 
 // log lua function that can be called in scripts thru this function
 void smile_vis_func_register(lua_State *L);

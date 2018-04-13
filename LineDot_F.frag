@@ -5,8 +5,15 @@ layout( location = 1 ) out vec4 OutColor;
 layout( location = 2 ) out vec4 OutColor2;
 
 uniform vec4 color;
+uniform bool render_to_tex;
+uniform sampler2D bound_tex;
 
-void main() {
-    //OutColor = texture(Tex01, out_uv);
-    OutColor2 = color;
+in vec2 out_uv;
+
+void main() {    
+    if (!render_to_tex) {
+        OutColor2 = color;
+    } else {
+        OutColor = texture(bound_tex, out_uv);;
+    }
 }

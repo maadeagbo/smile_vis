@@ -6,13 +6,15 @@
 
 /** \brief Data representation of smile feature points */
 struct FrameData {
-  dd_array<glm::vec2> input;
+  glm::vec3 verts[4];
+  glm::vec2 texcoords[4];
 };
 
-namespace SVDraw {
-  /** \brief Create structures for rendering */
-  void init_gpu_structures();
+/** \brief Create structures for rendering */
+int init_gpu_structures(lua_State *L);
 
-  /** \brief Draws FrameData within bounds of min and max 2D coordinates*/
-  void draw_frame(glm::vec2 min_vert, glm::vec2 max_vert, const FrameData frame);
-}
+/** \brief Modify scene data */
+int modify_scene_data(lua_State *L);
+
+/** \brief Updates FrameData for gpu */
+void update_frame(const FrameData *frame1, const FrameData *frame2 = nullptr);

@@ -6,6 +6,8 @@ do
 
 	smile_vis = {}
 
+	graphics_loaded = false
+
 
 	level_tag = "smile_vis_update"
 
@@ -27,6 +29,9 @@ do
 		if event == "update" then
 			-- Push level-specific update event
 			dd_push( {event_id = level_tag} )
+		
+		-- initialize level graphics stuff
+		if not graphics_loaded then load_graphics() end
 		end
 	end
 

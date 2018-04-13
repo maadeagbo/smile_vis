@@ -4,26 +4,26 @@
 #define MAX_INDICES 8
 
 namespace {
-  // Particle engine draw
-  ddPTask pt_draw_fdata;
+// Particle engine draw
+ddPTask pt_draw_fdata;
 
-  // shader for lines and points
-  ddShader linedot_sh;
+// shader for lines and points
+ddShader linedot_sh;
 
-  // line buffers
-  ddVAOData *line_vao = nullptr;
-  ddStorageBufferData *line_ssbo = nullptr;
-  ddIndexBufferData *line_ebo = nullptr;
-  dd_array<unsigned> l_indices;
-  dd_array<glm::vec3> l_points;
+// line buffers
+ddVAOData *line_vao = nullptr;
+ddStorageBufferData *line_ssbo = nullptr;
+ddIndexBufferData *line_ebo = nullptr;
+dd_array<unsigned> l_indices;
+dd_array<glm::vec3> l_points;
 
-  // point buffers
-  ddVAOData *point_vao = nullptr;
-  ddStorageBufferData *corner4_ssbo = nullptr;
-  ddStorageBufferData *frame_data_ssbo = nullptr;
+// point buffers
+ddVAOData *point_vao = nullptr;
+ddStorageBufferData *corner4_ssbo = nullptr;
+ddStorageBufferData *frame_data_ssbo = nullptr;
 }
 
-void SVDraw::init_gpu_structures() {
+int init_gpu_structures(lua_State *L) {
   // shader init
   cbuff<256> fname;
   linedot_sh.init();
@@ -34,20 +34,24 @@ void SVDraw::init_gpu_structures() {
 
   // line structures
   ddGPUFrontEnd::create_vao(line_vao);
-  ddGPUFrontEnd::create_storage_buffer(line_ssbo,
-                                       MAX_LINES * sizeof(float));
-  ddGPUFrontEnd::create_index_buffer(line_ebo,
-                                     MAX_INDICES * sizeof(unsigned),
+  ddGPUFrontEnd::create_storage_buffer(line_ssbo, MAX_LINES * sizeof(float));
+  ddGPUFrontEnd::create_index_buffer(line_ebo, MAX_INDICES * sizeof(unsigned),
                                      &l_indices[0]);
-  ddGPUFrontEnd::bind_storage_buffer_atrribute(
-      line_vao, line_ssbo, ddAttribPrimitive::FLOAT, 0,
-      3, 3 * sizeof(float), 0);
-  ddGPUFrontEnd::set_storage_buffer_contents(line_ssbo,
-                                             MAX_LINES * sizeof(float), 0,
-                                             &l_points[0]);
+  ddGPUFrontEnd::bind_storage_buffer_atrribute(line_vao, line_ssbo,
+                                               ddAttribPrimitive::FLOAT, 0, 3,
+                                               3 * sizeof(float), 0);
+  ddGPUFrontEnd::set_storage_buffer_contents(
+      line_ssbo, MAX_LINES * sizeof(float), 0, &l_points[0]);
   ddGPUFrontEnd::bind_index_buffer(line_vao, line_ebo);
 
   // point structures
   ddGPUFrontEnd::create_vao(point_vao);
   ddGPUFrontEnd::create_storage_buffer(corner4_ssbo, 4 * sizeof(float));
+}
+
+void draw_frame(const FrameData *frame1, const FrameData *frame2) {
+  // draw corners of frame 1
+
+  // draw lines of frame 1
+  // render particle color buffer 2 to texture
 }

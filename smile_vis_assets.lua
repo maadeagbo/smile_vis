@@ -25,11 +25,11 @@ function load()
 	smile_vis_assets.red_mat:set_base_color(0.5, 0.0, 0.0, 1.0)
 	smile_vis_assets.red_mat:set_specular(0.3)
 	-- Box agent
-	smile_vis_assets.rand_obj = ddAgent.new("rand_obj", 1.0, "box")
-	smile_vis_assets.rand_obj:set_pos(0.0, 5.0, 0.0)
-	smile_vis_assets.rand_obj:add_mesh(smile_vis_assets.cube_m:id(), 0.1, 100.0)
-	smile_vis_assets.rand_obj:set_mat_at_idx(0, 0, smile_vis_assets.red_mat:id())
-	ddLib.print( "Created agent (rand_obj): ", smile_vis_assets.rand_obj:id() )
+	--smile_vis_assets.rand_obj = ddAgent.new("rand_obj", 1.0, "box")
+	--smile_vis_assets.rand_obj:set_pos(0.0, 5.0, 0.0)
+	--smile_vis_assets.rand_obj:add_mesh(smile_vis_assets.cube_m:id(), 0.1, 100.0)
+	--smile_vis_assets.rand_obj:set_mat_at_idx(0, 0, smile_vis_assets.red_mat:id())
+	--ddLib.print( "Created agent (rand_obj): ", smile_vis_assets.rand_obj:id() )
 
 	-- Empty camera agent
 	smile_vis_assets.nav_agent = ddAgent.new("smile_vis_agent", 1.0, "kinematic")

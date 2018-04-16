@@ -14,7 +14,4 @@ struct FrameData {
 int init_gpu_structures(lua_State *L);
 
 /** \brief Modify scene data */
-int modify_scene_data(lua_State *L);
-
-/** \brief Updates FrameData for gpu */
-void update_frame(const FrameData *frame1, const FrameData *frame2 = nullptr);
+void update_frame_data(const FrameData& data);

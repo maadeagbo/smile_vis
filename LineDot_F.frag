@@ -14,6 +14,7 @@ void main() {
     if (!render_to_tex) {
         OutColor2 = color;
     } else {
-        OutColor = texture(bound_tex, out_uv);;
+        OutColor = texture(bound_tex, out_uv);
+        //OutColor = vec4(1.0);
     }
 }

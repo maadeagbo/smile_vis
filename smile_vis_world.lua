@@ -31,7 +31,7 @@ do
 			dd_push( {event_id = level_tag} )
 		
 		-- initialize level graphics stuff
-		if not graphics_loaded then load_graphics() end
+		if not graphics_loaded then load_graphics(); graphics_loaded = true; end
 		end
 	end
 

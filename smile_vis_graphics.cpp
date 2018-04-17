@@ -82,18 +82,27 @@ int init_gpu_structures(lua_State *L) {
 }
 
 void init_data() {
-	// initilize frames
-	FrameData _f;
-	_f.verts[0] = glm::vec3(0.0, 1.0, 0.0);		// halfway
-	_f.texcoords[0] = glm::vec2(0.5, 1.0);			// halfway
-	_f.verts[1] = glm::vec3(0.0, -1.0, 0.0);		// halfway
-	_f.texcoords[1] = glm::vec2(0.5, 0.0);			// halfway
-	_f.verts[2] = glm::vec3(1.0, -1.0, 0.0);
-	_f.texcoords[2] = glm::vec2(1.0, 0.0);
-	_f.verts[3] = glm::vec3(1.0, 1.0, 0.0);
-	_f.texcoords[3] = glm::vec2(1.0, 1.0);
+	// initilize frames (right side)
+	frames[0].verts[0] = glm::vec3(0.0, 1.0, 0.0);		// halfway
+	frames[0].texcoords[0] = glm::vec2(0.5, 1.0);		// halfway
+	frames[0].verts[1] = glm::vec3(0.0, -1.0, 0.0);		// halfway
+	frames[0].texcoords[1] = glm::vec2(0.5, 0.0);		// halfway
+	frames[0].verts[2] = glm::vec3(1.0, -1.0, 0.0);
+	frames[0].texcoords[2] = glm::vec2(1.0, 0.0);
+	frames[0].verts[3] = glm::vec3(1.0, 1.0, 0.0);
+	frames[0].texcoords[3] = glm::vec2(1.0, 1.0);
 
-	update_frame_data(_f);
+	update_frame_data(frames[0]);
+
+	// left side
+	frames[1].verts[0] = glm::vec3(-1.0, 1.0, 0.0);		
+	frames[1].texcoords[0] = glm::vec2(0.0, 1.0);			
+	frames[1].verts[1] = glm::vec3(-1.0, -1.0, 0.0);		
+	frames[1].texcoords[1] = glm::vec2(0.0, 0.0);
+	frames[1].verts[2] = glm::vec3(0.0, -1.0, 0.0);		// halfway
+	frames[1].texcoords[2] = glm::vec2(0.5, 0.0);		// halfway
+	frames[1].verts[3] = glm::vec3(0.0, 1.0, 0.0);		// halfway
+	frames[1].texcoords[3] = glm::vec2(0.5, 1.0);		// halfway
 }
 
 void update_frame_data(const FrameData& data) {
@@ -107,16 +116,24 @@ void draw_frame() {
 
 	if (cam) {
 		linedot_sh.use();
+		ddGPUFrontEnd::toggle_depth_mask(true);
+
 		// get camera matrices
 		const glm::mat4 v_mat = ddSceneManager::calc_view_matrix(cam);
 		const glm::mat4 p_mat = ddSceneManager::calc_p_proj_matrix(cam);
+
+		// wipe background
+		linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity);
+		linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(0.f, 0.f, 0.f, 1.f));
+		linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
+		linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, true);
+		ddGPUFrontEnd::render_quad();
+		linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, false);
 
 		// draw feature points
 		//linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity);
 		linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, p_mat * v_mat);
 		linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(1.f));
-		linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
-		linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, false);
 		ddGPUFrontEnd::render_quad();
 
 		// render the background (right side)
@@ -127,8 +144,7 @@ void draw_frame() {
 		linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, false);
 
 		// render frame cutout (right side)
-		ddGPUFrontEnd::toggle_depth_test(false);
-		linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity);
+		//ddGPUFrontEnd::toggle_depth_test(false);
 		linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(1.f));
 
 		ddGPUFrontEnd::draw_indexed_lines_vao(line_vao, l_indices.size(), 0);
@@ -138,9 +154,11 @@ void draw_frame() {
 		ddGPUFrontEnd::bind_pass_texture(ddBufferType::PARTICLE, 0, 1);
 		linedot_sh.set_uniform((int)RE_LineDot::bound_tex_smp2d, 0);
 
+		//ddGPUFrontEnd::render_quad();
+		refill_buffer(frames[1]);
 		ddGPUFrontEnd::render_primitive(6, point_buff, texcoord_buff);
 
-		ddGPUFrontEnd::toggle_depth_test(true);
+		ddGPUFrontEnd::toggle_depth_mask(false);
 	}
 }
 

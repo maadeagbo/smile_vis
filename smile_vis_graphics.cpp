@@ -37,16 +37,20 @@ void draw_frame();
 void init_data();
 
 /** \brief Refills points and uvs buffer w/ indexed FrameData */
-void refill_buffer(const FrameData& data);
+void refill_buffer(const FrameData &data);
 
 int init_gpu_structures(lua_State *L) {
-	// indices buffer
-	l_indices[0] = 0; l_indices[1] = 1;
-	l_indices[2] = 1; l_indices[3] = 2;
-	l_indices[4] = 2; l_indices[5] = 3;
-	l_indices[6] = 3; l_indices[7] = 0;
+  // indices buffer
+  l_indices[0] = 0;
+  l_indices[1] = 1;
+  l_indices[2] = 1;
+  l_indices[3] = 2;
+  l_indices[4] = 2;
+  l_indices[5] = 3;
+  l_indices[6] = 3;
+  l_indices[7] = 0;
 
-	init_data();
+  init_data();
 
   // shader init
   cbuff<256> fname;
@@ -64,110 +68,115 @@ int init_gpu_structures(lua_State *L) {
   ddGPUFrontEnd::bind_storage_buffer_atrribute(line_vao, point_ssbo,
                                                ddAttribPrimitive::FLOAT, 0, 3,
                                                3 * sizeof(float), 0);
-  ddGPUFrontEnd::set_storage_buffer_contents(
-		point_ssbo, l_points.sizeInBytes(), 0, &l_points[0]);
+  ddGPUFrontEnd::set_storage_buffer_contents(point_ssbo, l_points.sizeInBytes(),
+                                             0, &l_points[0]);
   ddGPUFrontEnd::bind_index_buffer(line_vao, line_ebo);
 
   // point structures
   ddGPUFrontEnd::create_vao(point_vao);
 
   // register particle task
-	draw_fdata.lifespan = 10.f;
-	draw_fdata.remain_on_q = true;
-	draw_fdata.rfunc = draw_frame;
+  draw_fdata.lifespan = 10.f;
+  draw_fdata.remain_on_q = true;
+  draw_fdata.rfunc = draw_frame;
 
-	ddParticleSys::add_task(draw_fdata);
+  ddParticleSys::add_task(draw_fdata);
 
   return 0;
 }
 
 void init_data() {
-	// initilize frames (right side)
-	frames[0].verts[0] = glm::vec3(0.0, 1.0, 0.0);		// halfway
-	frames[0].texcoords[0] = glm::vec2(0.5, 1.0);		// halfway
-	frames[0].verts[1] = glm::vec3(0.0, -1.0, 0.0);		// halfway
-	frames[0].texcoords[1] = glm::vec2(0.5, 0.0);		// halfway
-	frames[0].verts[2] = glm::vec3(1.0, -1.0, 0.0);
-	frames[0].texcoords[2] = glm::vec2(1.0, 0.0);
-	frames[0].verts[3] = glm::vec3(1.0, 1.0, 0.0);
-	frames[0].texcoords[3] = glm::vec2(1.0, 1.0);
+  // initilize frames (right side)
+  frames[0].verts[0] = glm::vec3(0.0, 1.0, 0.0);   // halfway
+  frames[0].texcoords[0] = glm::vec2(0.5, 1.0);    // halfway
+  frames[0].verts[1] = glm::vec3(0.0, -1.0, 0.0);  // halfway
+  frames[0].texcoords[1] = glm::vec2(0.5, 0.0);    // halfway
+  frames[0].verts[2] = glm::vec3(1.0, -1.0, 0.0);
+  frames[0].texcoords[2] = glm::vec2(1.0, 0.0);
+  frames[0].verts[3] = glm::vec3(1.0, 1.0, 0.0);
+  frames[0].texcoords[3] = glm::vec2(1.0, 1.0);
 
-	update_frame_data(frames[0]);
+  update_frame_data(frames[0]);
 
-	// left side
-	frames[1].verts[0] = glm::vec3(-1.0, 1.0, 0.0);		
-	frames[1].texcoords[0] = glm::vec2(0.0, 1.0);			
-	frames[1].verts[1] = glm::vec3(-1.0, -1.0, 0.0);		
-	frames[1].texcoords[1] = glm::vec2(0.0, 0.0);
-	frames[1].verts[2] = glm::vec3(0.0, -1.0, 0.0);		// halfway
-	frames[1].texcoords[2] = glm::vec2(0.5, 0.0);		// halfway
-	frames[1].verts[3] = glm::vec3(0.0, 1.0, 0.0);		// halfway
-	frames[1].texcoords[3] = glm::vec2(0.5, 1.0);		// halfway
+  // left side
+  frames[1].verts[0] = glm::vec3(-1.0, 1.0, 0.0);
+  frames[1].texcoords[0] = glm::vec2(0.0, 1.0);
+  frames[1].verts[1] = glm::vec3(-1.0, -1.0, 0.0);
+  frames[1].texcoords[1] = glm::vec2(0.0, 0.0);
+  frames[1].verts[2] = glm::vec3(0.0, -1.0, 0.0);  // halfway
+  frames[1].texcoords[2] = glm::vec2(0.5, 0.0);    // halfway
+  frames[1].verts[3] = glm::vec3(0.0, 1.0, 0.0);   // halfway
+  frames[1].texcoords[3] = glm::vec2(0.5, 1.0);    // halfway
 }
 
-void update_frame_data(const FrameData& data) {
-	refill_buffer(data);
-}
+void update_frame_data(const FrameData &data) { refill_buffer(data); }
 
 /** \brief Draws FrameData for gpu */
 void draw_frame() {
-	ddCam *cam = ddSceneManager::get_active_cam();
-	const glm::mat4 identity;
-	const glm::uvec2 scr_dim = ddSceneManager::get_screen_dimensions();
+  ddCam *cam = ddSceneManager::get_active_cam();
+  const glm::mat4 identity;
+  const glm::uvec2 scr_dim = ddSceneManager::get_screen_dimensions();
 
-	if (cam) {
-		// switch to separate framebuffer for render to texture
-		ddGPUFrontEnd::blit_depth_buffer(ddBufferType::PARTICLE, ddBufferType::XTRA,
-			scr_dim.x, scr_dim.y);
-		ddGPUFrontEnd::bind_framebuffer(ddBufferType::XTRA);
-		ddGPUFrontEnd::clear_color_buffer();
+  if (cam) {
+    // switch to separate framebuffer for render to texture
+    ddGPUFrontEnd::blit_depth_buffer(ddBufferType::PARTICLE, ddBufferType::XTRA,
+                                     scr_dim.x, scr_dim.y);
+    ddGPUFrontEnd::bind_framebuffer(ddBufferType::XTRA);
+    ddGPUFrontEnd::clear_color_buffer();
 
-		// get camera matrices & activate shader
-		const glm::mat4 v_mat = ddSceneManager::calc_view_matrix(cam);
-		const glm::mat4 p_mat = ddSceneManager::calc_p_proj_matrix(cam);
-		linedot_sh.use();
+    // get camera matrices & activate shader
+    const glm::mat4 v_mat = ddSceneManager::calc_view_matrix(cam);
+    const glm::mat4 p_mat = ddSceneManager::calc_p_proj_matrix(cam);
+    linedot_sh.use();
 
-		// render frame cutout (right side) ****************************************
-		// draw feature points
-		linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, p_mat * v_mat);
-		linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(1.f));
-		linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
-		ddGPUFrontEnd::render_quad();
+    // render frame cutout (right side) ****************************************
+    // draw feature points
+    linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, p_mat * v_mat);
+    linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(1.f));
+    linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
+    ddGPUFrontEnd::render_quad();
 
-		// render the background
-		linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity);
-		linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, true);
-		linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
-		ddGPUFrontEnd::render_quad();
-		linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, false);
+    // render the background
+    linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity);
+    linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, true);
+    linedot_sh.set_uniform((int)RE_LineDot::color_v4,
+                           glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
+    ddGPUFrontEnd::render_quad();
+    linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, false);
 
-		// bind Particle frame buffer & bind texture from last draw calls
-		ddGPUFrontEnd::bind_framebuffer(ddBufferType::PARTICLE);
-		linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, true);
-		ddGPUFrontEnd::bind_pass_texture(ddBufferType::XTRA, 0);
-		linedot_sh.set_uniform((int)RE_LineDot::bound_tex_smp2d, 0);
+    // bind Particle frame buffer & bind texture from last draw calls
+    ddGPUFrontEnd::bind_framebuffer(ddBufferType::PARTICLE);
+    linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, true);
+    ddGPUFrontEnd::bind_pass_texture(ddBufferType::XTRA, 0);
+    linedot_sh.set_uniform((int)RE_LineDot::bound_tex_smp2d, 0);
 
-		// render right side cutout 
-		refill_buffer(frames[0]);
-		ddGPUFrontEnd::render_primitive(6, point_buff, texcoord_buff);
-		// render border
-		linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
-		linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(1.f));
-		ddGPUFrontEnd::draw_indexed_lines_vao(line_vao, l_indices.size(), 0);
-	}
+    // render right side cutout
+    refill_buffer(frames[0]);
+    ddGPUFrontEnd::render_primitive(6, point_buff, texcoord_buff);
+    // render border
+    linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
+    linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(1.f));
+    ddGPUFrontEnd::draw_indexed_lines_vao(line_vao, l_indices.size(), 0);
+  }
 }
 
-void refill_buffer(const FrameData& data) {
-	for (unsigned i = 0; i < MAX_POINTS; i++) {
-		l_points[i] = data.verts[i];
-		l_texcoords[i] = data.texcoords[i];
-	}
-	// set buffers for gpu render
-	point_buff[0] = l_points[0]; texcoord_buff[0] = l_texcoords[0];
-	point_buff[1] = l_points[1]; texcoord_buff[1] = l_texcoords[1];
-	point_buff[2] = l_points[2]; texcoord_buff[2] = l_texcoords[2];
+void refill_buffer(const FrameData &data) {
+  for (unsigned i = 0; i < MAX_POINTS; i++) {
+    l_points[i] = data.verts[i];
+    l_texcoords[i] = data.texcoords[i];
+  }
+  // set buffers for gpu render
+  point_buff[0] = l_points[0];
+  texcoord_buff[0] = l_texcoords[0];
+  point_buff[1] = l_points[1];
+  texcoord_buff[1] = l_texcoords[1];
+  point_buff[2] = l_points[2];
+  texcoord_buff[2] = l_texcoords[2];
 
-	point_buff[3] = l_points[0]; texcoord_buff[3] = l_texcoords[0];
-	point_buff[4] = l_points[2]; texcoord_buff[4] = l_texcoords[2];
-	point_buff[5] = l_points[3]; texcoord_buff[5] = l_texcoords[3];
+  point_buff[3] = l_points[0];
+  texcoord_buff[3] = l_texcoords[0];
+  point_buff[4] = l_points[2];
+  texcoord_buff[4] = l_texcoords[2];
+  point_buff[5] = l_points[3];
+  texcoord_buff[5] = l_texcoords[3];
 }

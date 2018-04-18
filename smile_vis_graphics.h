@@ -11,7 +11,7 @@ struct FrameData {
 };
 
 /** \brief Create structures for rendering */
-int init_gpu_structures(lua_State *L);
+int init_gpu_structures(lua_State* L);
 
 /** \brief Modify scene data */
 void update_frame_data(const FrameData& data);

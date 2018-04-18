@@ -113,52 +113,47 @@ void update_frame_data(const FrameData& data) {
 void draw_frame() {
 	ddCam *cam = ddSceneManager::get_active_cam();
 	const glm::mat4 identity;
+	const glm::uvec2 scr_dim = ddSceneManager::get_screen_dimensions();
 
 	if (cam) {
-		linedot_sh.use();
-		ddGPUFrontEnd::toggle_depth_mask(true);
+		// switch to separate framebuffer for render to texture
+		ddGPUFrontEnd::blit_depth_buffer(ddBufferType::PARTICLE, ddBufferType::XTRA,
+			scr_dim.x, scr_dim.y);
+		ddGPUFrontEnd::bind_framebuffer(ddBufferType::XTRA);
+		ddGPUFrontEnd::clear_color_buffer();
 
-		// get camera matrices
+		// get camera matrices & activate shader
 		const glm::mat4 v_mat = ddSceneManager::calc_view_matrix(cam);
 		const glm::mat4 p_mat = ddSceneManager::calc_p_proj_matrix(cam);
+		linedot_sh.use();
 
-		// wipe background
-		linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity);
-		linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(0.f, 0.f, 0.f, 1.f));
-		linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
-		linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, true);
-		ddGPUFrontEnd::render_quad();
-		linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, false);
-
+		// render frame cutout (right side) ****************************************
 		// draw feature points
-		//linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity);
 		linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, p_mat * v_mat);
 		linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(1.f));
+		linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
 		ddGPUFrontEnd::render_quad();
 
-		// render the background (right side)
+		// render the background
 		linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity);
 		linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, true);
 		linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
 		ddGPUFrontEnd::render_quad();
 		linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, false);
 
-		// render frame cutout (right side)
-		//ddGPUFrontEnd::toggle_depth_test(false);
-		linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(1.f));
-
-		ddGPUFrontEnd::draw_indexed_lines_vao(line_vao, l_indices.size(), 0);
-
-		// bind texture from last draw calls
+		// bind Particle frame buffer & bind texture from last draw calls
+		ddGPUFrontEnd::bind_framebuffer(ddBufferType::PARTICLE);
 		linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, true);
-		ddGPUFrontEnd::bind_pass_texture(ddBufferType::PARTICLE, 0, 1);
+		ddGPUFrontEnd::bind_pass_texture(ddBufferType::XTRA, 0);
 		linedot_sh.set_uniform((int)RE_LineDot::bound_tex_smp2d, 0);
 
-		//ddGPUFrontEnd::render_quad();
-		refill_buffer(frames[1]);
+		// render right side cutout 
+		refill_buffer(frames[0]);
 		ddGPUFrontEnd::render_primitive(6, point_buff, texcoord_buff);
-
-		ddGPUFrontEnd::toggle_depth_mask(false);
+		// render border
+		linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
+		linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(1.f));
+		ddGPUFrontEnd::draw_indexed_lines_vao(line_vao, l_indices.size(), 0);
 	}
 }
 

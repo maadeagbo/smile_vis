@@ -15,10 +15,10 @@ function load()
 	ddLib.print( "Created light: ", smile_vis_assets.light_1:id() )
 
 	-- Floor agent
-	smile_vis_assets.floor = ddAgent.new("floor_agent", 0.0, "box")
-	smile_vis_assets.floor:set_scale(100.0, 0.2, 100.0)
-	smile_vis_assets.floor:add_mesh(smile_vis_assets.cube_m:id(), 0.1, 100.0)
-	ddLib.print( "Created agent (floor): ", smile_vis_assets.floor:id() )
+	--smile_vis_assets.floor = ddAgent.new("floor_agent", 0.0, "box")
+	--smile_vis_assets.floor:set_scale(100.0, 0.2, 100.0)
+	--smile_vis_assets.floor:add_mesh(smile_vis_assets.cube_m:id(), 0.1, 100.0)
+	--ddLib.print( "Created agent (floor): ", smile_vis_assets.floor:id() )
 
 	-- Red material
 	smile_vis_assets.red_mat = ddMat.new("mat_red")

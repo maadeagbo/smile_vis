@@ -22,6 +22,9 @@ do
 		-- Subscribe to smile_vis_world generated callback
 		dd_subscribe( {key = smile_vis.actor.name, event = level_tag} )
 
+		-- log screen dimensions
+		assets.scr_x, assets.scr_y = ddLib.scr_dimensions()
+
 		ddLib.print( "smile_vis init called." )
 	end
 

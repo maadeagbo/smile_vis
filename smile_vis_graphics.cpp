@@ -87,10 +87,10 @@ int init_gpu_structures(lua_State *L) {
 
 void init_data() {
   // initilize frames (right side)
-  frames[0].verts[0] = glm::vec3(0.0, 1.0, 0.0);   // halfway
-  frames[0].texcoords[0] = glm::vec2(0.5, 1.0);    // halfway
-  frames[0].verts[1] = glm::vec3(0.0, -1.0, 0.0);  // halfway
-  frames[0].texcoords[1] = glm::vec2(0.5, 0.0);    // halfway
+  frames[0].verts[0] = glm::vec3(-0.2, 1.0, 0.0);   // halfway
+  frames[0].texcoords[0] = glm::vec2(0.4, 1.0);     // halfway
+  frames[0].verts[1] = glm::vec3(-0.2, -1.0, 0.0);  // halfway
+  frames[0].texcoords[1] = glm::vec2(0.4, 0.0);     // halfway
   frames[0].verts[2] = glm::vec3(1.0, -1.0, 0.0);
   frames[0].texcoords[2] = glm::vec2(1.0, 0.0);
   frames[0].verts[3] = glm::vec3(1.0, 1.0, 0.0);

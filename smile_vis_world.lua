@@ -32,6 +32,8 @@ do
 		if event == "update" then
 			-- Push level-specific update event
 			dd_push( {event_id = level_tag} )
+			-- show ui
+			smile_UI()
 		
 		-- initialize level graphics stuff
 		if not graphics_loaded then load_graphics(); graphics_loaded = true; end

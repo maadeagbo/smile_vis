@@ -16,6 +16,7 @@ struct smile_vis_reflect : public ddLvlPrototype {
 void smile_vis_func_register(lua_State *L) {
   // log functions using register_callback_lua
   register_callback_lua(L, "load_graphics", init_gpu_structures);
+  register_callback_lua(L, "smile_UI", load_ui);
 }
 
 // log reflection

@@ -1,6 +1,8 @@
 #include "smile_vis_graphics.h"
 #include "ddTerminal.h"
 #include "svis_shader_enums.h"
+#include "ddFileIO.h"
+#include "smile_vis_data.h"
 
 #define MAX_POINTS 4
 #define MAX_INDICES 8
@@ -18,6 +20,13 @@ ddIndexBufferData *line_ebo = nullptr;
 dd_array<unsigned> l_indices = dd_array<unsigned>(MAX_INDICES);
 dd_array<glm::vec3> l_points = dd_array<glm::vec3>(MAX_POINTS);
 dd_array<glm::vec2> l_texcoords = dd_array<glm::vec2>(MAX_POINTS);
+
+// structures for tracking useable files
+int selected_file = 0;
+cbuff<512> f_dir;
+dd_array<cbuff<512>> files;
+dd_array<cbuff<64>> file_names;
+dd_array<const char*> file_names_ptr;
 
 // buffers for drawing primitives
 glm::vec3 point_buff[6];
@@ -132,7 +141,7 @@ void draw_frame() {
 
     // get camera matrices & activate shader
     const glm::mat4 v_mat = ddSceneManager::calc_view_matrix(cam);
-    const glm::mat4 p_mat = ddSceneManager::calc_p_proj_matrix(cam);
+    const glm::mat4 p_mat = ddSceneManager::calc_o_proj_matrix(cam, -2, 2, 2, -2);
     linedot_sh.use();
 
     // render frame cutout (right side) ****************************************
@@ -140,7 +149,7 @@ void draw_frame() {
     linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, p_mat * v_mat);
     linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(1.f));
     linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
-    ddGPUFrontEnd::render_quad();
+    ddGPUFrontEnd::render_cube();
 
     // render the background
     linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity);
@@ -229,7 +238,7 @@ void set_imgui_style() {
   style->Colors[ImGuiCol_Button] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
   style->Colors[ImGuiCol_ButtonHovered] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
   style->Colors[ImGuiCol_ButtonActive] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
-  style->Colors[ImGuiCol_Header] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
+  style->Colors[ImGuiCol_Header] = ImVec4(0.23f, 0.23f, 0.23f, 1.00f);
   style->Colors[ImGuiCol_HeaderHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
   style->Colors[ImGuiCol_HeaderActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
   style->Colors[ImGuiCol_Column] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
@@ -271,7 +280,62 @@ int load_ui(lua_State *L) {
 
   ImGui::Begin("Smile Visualization", &win_on, window_flags);
 
+	// stop edge clipping
+	ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.75f);
+
+	// show list of selectable files
+	ImColor col(1.f, 0.85f, 0.f);
+	if (file_names_ptr.size() > 0) {
+		ImGui::PushStyleColor(ImGuiCol_Text, col);
+		ImGui::Text("Reading from: %s", f_dir.str());
+		ImGui::PopStyleColor();
+		ImGui::ListBox("<-- Select data", &selected_file, &file_names_ptr[0],
+			(int)file_names_ptr.size(), 10);
+
+		// button to load data
+		if (ImGui::Button("Load selected")) {
+			extract_vector2(files[selected_file].str());
+		}
+	} else {
+		ImGui::PushStyleColor(ImGuiCol_Text, col);
+		ImGui::Text("No Folders loaded/Folder not found");
+		ImGui::PopStyleColor();
+	}
+	ImGui::Separator();
+
+	ImGui::PopItemWidth();
   ImGui::End();
 
   return 0;
+}
+
+void load_files(const char * directory) {
+	// open folder & extract files
+	f_dir = directory;
+	ddIO folder_handle;
+	folder_handle.open(directory, ddIOflag::DIRECTORY);
+	dd_array<cbuff<512>> unfiltered = folder_handle.get_directory_files();
+
+	// check if file contains _s_out.csv or _v_out.csv
+	dd_array<unsigned> valid_files(unfiltered.size());
+	unsigned files_found = 0;
+	DD_FOREACH(cbuff<512>, file, unfiltered) {
+		// capture index of matching files
+		if (file.ptr->contains("_s_out") || file.ptr->contains("_v_out")) {
+			valid_files[files_found] = file.i;
+			files_found++;
+		}
+	}
+
+	// create visible list of files
+	files.resize(files_found);
+	file_names.resize(files_found);
+	file_names_ptr.resize(files_found);
+	DD_FOREACH(unsigned, index, valid_files) {
+		files[index.i] = unfiltered[*index.ptr];
+
+		std::string _s = unfiltered[*index.ptr].str();
+		file_names[index.i] = _s.substr(_s.find_last_of("\\/") + 1).c_str();
+		file_names_ptr[index.i] = file_names[index.i].str();
+	}
 }

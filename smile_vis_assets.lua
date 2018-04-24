@@ -33,7 +33,7 @@ function load()
 
 	-- Empty camera agent
 	smile_vis_assets.nav_agent = ddAgent.new("smile_vis_agent", 1.0, "kinematic")
-	smile_vis_assets.nav_agent:set_pos(0.0, 2.0, 5.0)
+	smile_vis_assets.nav_agent:set_pos(0.0, 0.0, 5.0)
 	smile_vis_assets.nav_agent:set_eulerPYR(0.0, 0.0)
 	ddLib.print( "Created agent (smile_vis_agent): ", smile_vis_assets.nav_agent:id() )
 

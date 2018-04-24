@@ -25,6 +25,9 @@ do
 		-- log screen dimensions
 		assets.scr_x, assets.scr_y = ddLib.scr_dimensions()
 
+		-- open folder containing smile data
+		load_folder("C:/Users/Moses/Documents/smile_neural_net_processor/input")
+
 		ddLib.print( "smile_vis init called." )
 	end
 

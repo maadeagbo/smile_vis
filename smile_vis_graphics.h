@@ -18,3 +18,6 @@ void update_frame_data(const FrameData& data);
 
 /** \brief ImGUI ui for seeing and setting points */
 int load_ui(lua_State* L);
+
+/** \brief Sets the list of files visible in menu */
+void load_files(const char* directory);

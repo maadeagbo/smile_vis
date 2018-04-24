@@ -5,7 +5,7 @@ do
 
 	smile_vis_actor = {}
 
-	speed = 5.0
+	speed = 0.5
 	pitch = 0
 	yaw = 0
 
@@ -41,12 +41,8 @@ do
 
 		-- rotation
 		if input.mouse_b_l and not ddLib.mouse_over_UI() and mloc_x > 0.4 then
-
-			--assets.cam_01:set_eulerPYR(pitch, 0, 0)
-			--assets.nav_agent:set_eulerPYR(0, yaw, 0)
-
-			new_pos[1][1] = new_pos[1][1] + input.mouse_x_delta * ftime 
-			new_pos[2][1] = new_pos[2][1] + input.mouse_y_delta * -ftime
+			new_pos[1][1] = new_pos[1][1] + input.mouse_x_delta * ftime * speed
+			new_pos[2][1] = new_pos[2][1] + input.mouse_y_delta * -ftime * speed
 
 			assets.nav_agent:set_pos(new_pos[1][1], new_pos[2][1], new_pos[3][1])
 		end

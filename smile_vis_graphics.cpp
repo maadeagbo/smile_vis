@@ -17,6 +17,7 @@ ddShader linedot_sh;
 // line buffers
 ddVAOData *line_vao = nullptr;
 ddIndexBufferData *line_ebo = nullptr;
+ddStorageBufferData *line_ssbo = nullptr;
 dd_array<unsigned> l_indices = dd_array<unsigned>(MAX_INDICES);
 dd_array<glm::vec3> l_points = dd_array<glm::vec3>(MAX_POINTS);
 dd_array<glm::vec2> l_texcoords = dd_array<glm::vec2>(MAX_POINTS);
@@ -77,18 +78,19 @@ int init_gpu_structures(lua_State *L) {
 
   // line structures
   ddGPUFrontEnd::create_vao(line_vao);
-  ddGPUFrontEnd::create_storage_buffer(point_ssbo, l_points.sizeInBytes());
+  ddGPUFrontEnd::create_storage_buffer(line_ssbo, l_points.sizeInBytes());
   ddGPUFrontEnd::create_index_buffer(line_ebo, l_indices.sizeInBytes(),
                                      &l_indices[0]);
-  ddGPUFrontEnd::bind_storage_buffer_atrribute(line_vao, point_ssbo,
+  ddGPUFrontEnd::bind_storage_buffer_atrribute(line_vao, line_ssbo,
                                                ddAttribPrimitive::FLOAT, 0, 3,
                                                3 * sizeof(float), 0);
-  ddGPUFrontEnd::set_storage_buffer_contents(point_ssbo, l_points.sizeInBytes(),
+  ddGPUFrontEnd::set_storage_buffer_contents(line_ssbo, l_points.sizeInBytes(),
                                              0, &l_points[0]);
   ddGPUFrontEnd::bind_index_buffer(line_vao, line_ebo);
 
   // point structures
   ddGPUFrontEnd::create_vao(point_vao);
+	ddGPUFrontEnd::create_storage_buffer(point_ssbo, 50 * 3 * sizeof(float));
 
   // register particle task
   draw_fdata.lifespan = 10.f;

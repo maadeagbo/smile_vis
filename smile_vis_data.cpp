@@ -155,7 +155,7 @@ std::vector<glm::vec3> get_points(std::vector<Eigen::VectorXd>& v_bin,
 
 	if (type == VectorOut::INPUT) {
 		// use all values
-		out_points.reserve(v_bin[idx].size()/2);
+		out_points.resize(v_bin[idx].size()/2);
 		unsigned c_idx = 0;
 
 		// Oral commisure (L) x,Oral commisure (L) y,
@@ -171,7 +171,7 @@ std::vector<glm::vec3> get_points(std::vector<Eigen::VectorXd>& v_bin,
 		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
 	} else {
 		// skip 1st 4 values (remove delta values)
-		out_points.reserve((v_bin[idx].size() - 4)/2);
+		out_points.resize((v_bin[idx].size() - 4)/2);
 		unsigned c_idx = 2;
 
 		// Lateral canthus (L) x,Lateral canthus (L) y,

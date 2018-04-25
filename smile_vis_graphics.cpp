@@ -162,13 +162,13 @@ void draw_frame() {
 
     // get camera matrices & activate point shader
     const glm::mat4 v_mat = ddSceneManager::calc_view_matrix(cam);
-    //const glm::mat4 p_mat =
-         //ddSceneManager::calc_o_proj_matrix(cam, 1250, 1360, 730, 710);
-    const glm::mat4 p_mat = ddSceneManager::calc_p_proj_matrix(cam);
+    const glm::mat4 p_mat =
+         ddSceneManager::calc_o_proj_matrix(cam, 900, 1100, 700, 500);
+    //const glm::mat4 p_mat = ddSceneManager::calc_p_proj_matrix(cam);
     point_sh.use();
 
     // draw feature points
-    glm::mat4 m_mat = glm::scale(glm::mat4(), glm::vec3(0.2f));
+    glm::mat4 m_mat = glm::scale(glm::mat4(), glm::vec3(1.f));
     point_sh.set_uniform((int)RE_Point::MV_m4x4, v_mat * m_mat);
     point_sh.set_uniform((int)RE_Point::Proj_m4x4, p_mat);
     point_sh.set_uniform((int)RE_Point::quad_h_width_f, 10.f);

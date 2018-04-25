@@ -20,4 +20,4 @@ void update_frame_data(const FrameData& data);
 int load_ui(lua_State* L);
 
 /** \brief Sets the list of files visible in menu */
-void load_files(const char* directory);
+void load_files(const char* directory, const bool ground_truth = false);

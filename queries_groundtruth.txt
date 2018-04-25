@@ -1,0 +1,10 @@
+iris_delta
+dental_show_delta
+pfissure_
+Lateral canthus
+Palpebral fissure
+Depressor
+Iris
+Nasal ala
+Medial brow
+Malar eminence

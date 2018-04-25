@@ -1,8 +1,8 @@
 #include "smile_vis_graphics.h"
-#include "ddTerminal.h"
-#include "svis_shader_enums.h"
 #include "ddFileIO.h"
+#include "ddTerminal.h"
 #include "smile_vis_data.h"
+#include "svis_shader_enums.h"
 
 #define MAX_POINTS 4
 #define MAX_INDICES 8
@@ -13,6 +13,7 @@ ddPTask draw_fdata;
 
 // shader for lines and points
 ddShader linedot_sh;
+ddShader point_sh;
 
 // line buffers
 ddVAOData *line_vao = nullptr;
@@ -25,9 +26,10 @@ dd_array<glm::vec2> l_texcoords = dd_array<glm::vec2>(MAX_POINTS);
 // structures for tracking useable files
 int selected_file = 0;
 cbuff<512> f_dir;
+cbuff<512> gd_dir;
 dd_array<cbuff<512>> files;
 dd_array<cbuff<64>> file_names;
-dd_array<const char*> file_names_ptr;
+dd_array<const char *> file_names_ptr;
 
 // buffers for drawing primitives
 glm::vec3 point_buff[6];
@@ -39,6 +41,15 @@ ddStorageBufferData *point_ssbo = nullptr;
 
 // manipulatible frame data
 FrameData frames[2];
+
+// data points of current visualization
+std::vector<Eigen::VectorXd> input_p;
+
+// data points of ground truth
+std::vector<Eigen::VectorXd> groundtruth_p;
+
+// data points of calculated network
+std::vector<Eigen::VectorXd> calc_p;
 }  // namespace
 
 /** \brief Draws FrameData for particle task */
@@ -66,7 +77,7 @@ int init_gpu_structures(lua_State *L) {
 
   init_data();
 
-	set_imgui_style();
+  set_imgui_style();
 
   // shader init
   cbuff<256> fname;
@@ -75,6 +86,14 @@ int init_gpu_structures(lua_State *L) {
   linedot_sh.create_vert_shader(fname.str());
   fname.format("%s/smile_vis/%s", PROJECT_DIR, "LineDot_F.frag");
   linedot_sh.create_frag_shader(fname.str());
+
+  point_sh.init();
+  fname.format("%s/smile_vis/%s", PROJECT_DIR, "PointRend_V.vert");
+  point_sh.create_vert_shader(fname.str());
+  fname.format("%s/smile_vis/%s", PROJECT_DIR, "PointRend_G.geom");
+  point_sh.create_geom_shader(fname.str());
+  fname.format("%s/smile_vis/%s", PROJECT_DIR, "PointRend_F.frag");
+  point_sh.create_frag_shader(fname.str());
 
   // line structures
   ddGPUFrontEnd::create_vao(line_vao);
@@ -90,7 +109,7 @@ int init_gpu_structures(lua_State *L) {
 
   // point structures
   ddGPUFrontEnd::create_vao(point_vao);
-	ddGPUFrontEnd::create_storage_buffer(point_ssbo, 50 * 3 * sizeof(float));
+  ddGPUFrontEnd::create_storage_buffer(point_ssbo, 50 * 3 * sizeof(float));
 
   // register particle task
   draw_fdata.lifespan = 10.f;
@@ -141,21 +160,41 @@ void draw_frame() {
     ddGPUFrontEnd::bind_framebuffer(ddBufferType::XTRA);
     ddGPUFrontEnd::clear_color_buffer();
 
-    // get camera matrices & activate shader
+    // get camera matrices & activate point shader
     const glm::mat4 v_mat = ddSceneManager::calc_view_matrix(cam);
-    const glm::mat4 p_mat = ddSceneManager::calc_o_proj_matrix(cam, -2, 2, 2, -2);
-    linedot_sh.use();
+    //const glm::mat4 p_mat =
+         //ddSceneManager::calc_o_proj_matrix(cam, 1250, 1360, 730, 710);
+    const glm::mat4 p_mat = ddSceneManager::calc_p_proj_matrix(cam);
+    point_sh.use();
+
+    // draw feature points
+    glm::mat4 m_mat = glm::scale(glm::mat4(), glm::vec3(0.2f));
+    point_sh.set_uniform((int)RE_Point::MV_m4x4, v_mat * m_mat);
+    point_sh.set_uniform((int)RE_Point::Proj_m4x4, p_mat);
+    point_sh.set_uniform((int)RE_Point::quad_h_width_f, 10.f);
+    point_sh.set_uniform((int)RE_Point::color_v4, glm::vec4(1.f));
+
+    if (input_p.size() > 0) {
+      std::vector<glm::vec3> data_i = std::move(get_points(input_p, 0, VectorOut::INPUT));
+      //dd_array<glm::vec3> data_i(1); data_i[0] = glm::vec3(0.f, 0.f, 0.f);
+      ddGPUFrontEnd::set_storage_buffer_contents(point_ssbo, data_i.size() * sizeof(glm::vec3),
+                                             0, &data_i[0]);
+      ddGPUFrontEnd::draw_points(point_vao, point_ssbo, ddAttribPrimitive::FLOAT, 0, 3, 3, 0, 0, data_i.size());
+    }
 
     // render frame cutout (right side) ****************************************
-    // draw feature points
-    linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, p_mat * v_mat);
-    linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(1.f));
+    linedot_sh.use();
+
+    m_mat = glm::translate(glm::mat4(), glm::vec3(5.f, 0.f, 0.f));
+    linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, p_mat * v_mat * m_mat);
+    linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, false);
     linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
     ddGPUFrontEnd::render_cube();
 
     // render the background
     linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity);
     linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, true);
+    linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
     linedot_sh.set_uniform((int)RE_LineDot::color_v4,
                            glm::vec4(0.5f, 0.5f, 0.5f, 1.f));
     ddGPUFrontEnd::render_quad();
@@ -282,62 +321,75 @@ int load_ui(lua_State *L) {
 
   ImGui::Begin("Smile Visualization", &win_on, window_flags);
 
-	// stop edge clipping
-	ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.75f);
+  // stop edge clipping
+  ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.75f);
 
-	// show list of selectable files
-	ImColor col(1.f, 0.85f, 0.f);
-	if (file_names_ptr.size() > 0) {
-		ImGui::PushStyleColor(ImGuiCol_Text, col);
-		ImGui::Text("Reading from: %s", f_dir.str());
-		ImGui::PopStyleColor();
-		ImGui::ListBox("<-- Select data", &selected_file, &file_names_ptr[0],
-			(int)file_names_ptr.size(), 10);
+  // show list of selectable files
+  ImColor col(1.f, 0.85f, 0.f);
+  if (file_names_ptr.size() > 0) {
+    ImGui::PushStyleColor(ImGuiCol_Text, col);
+    ImGui::Text("IN: %s", f_dir.str());
+    ImGui::PopStyleColor();
 
-		// button to load data
-		if (ImGui::Button("Load selected")) {
-			extract_vector2(files[selected_file].str());
-		}
-	} else {
-		ImGui::PushStyleColor(ImGuiCol_Text, col);
-		ImGui::Text("No Folders loaded/Folder not found");
-		ImGui::PopStyleColor();
-	}
-	ImGui::Separator();
+    ImGui::PushStyleColor(ImGuiCol_Text, col);
+    ImGui::Text("GT: %s", gd_dir.str());
+    ImGui::PopStyleColor();
 
-	ImGui::PopItemWidth();
+    ImGui::ListBox("<-- Select data", &selected_file, &file_names_ptr[0],
+                   (int)file_names_ptr.size(), 10);
+
+    // button to load data
+    if (ImGui::Button("Load selected")) {
+      input_p = extract_vector2(files[selected_file].str());
+      std::string temp = gd_dir.str() + std::string("/") + 
+        std::string(file_names_ptr[selected_file]);
+      groundtruth_p = extract_vector2(temp.c_str());
+    }
+  } else {
+    ImGui::PushStyleColor(ImGuiCol_Text, col);
+    ImGui::Text("No Folders loaded/Folder not found");
+    ImGui::PopStyleColor();
+  }
+  ImGui::Separator();
+
+  ImGui::PopItemWidth();
   ImGui::End();
 
   return 0;
 }
 
-void load_files(const char * directory) {
-	// open folder & extract files
-	f_dir = directory;
-	ddIO folder_handle;
-	folder_handle.open(directory, ddIOflag::DIRECTORY);
-	dd_array<cbuff<512>> unfiltered = folder_handle.get_directory_files();
+void load_files(const char *directory, const bool ground_truth) {
+  if (ground_truth) {
+    // log ground truth directory
+    gd_dir = directory;
+  } else {
+    // open folder & extract files
+    f_dir = directory;
+    ddIO folder_handle;
+    folder_handle.open(directory, ddIOflag::DIRECTORY);
+    dd_array<cbuff<512>> unfiltered = folder_handle.get_directory_files();
 
-	// check if file contains _s_out.csv or _v_out.csv
-	dd_array<unsigned> valid_files(unfiltered.size());
-	unsigned files_found = 0;
-	DD_FOREACH(cbuff<512>, file, unfiltered) {
-		// capture index of matching files
-		if (file.ptr->contains("_s_out") || file.ptr->contains("_v_out")) {
-			valid_files[files_found] = file.i;
-			files_found++;
-		}
-	}
+    // check if file contains _s_out.csv or _v_out.csv
+    dd_array<unsigned> valid_files(unfiltered.size());
+    unsigned files_found = 0;
+    DD_FOREACH(cbuff<512>, file, unfiltered) {
+      // capture index of matching files
+      if (file.ptr->contains("_s_out") || file.ptr->contains("_v_out")) {
+        valid_files[files_found] = file.i;
+        files_found++;
+      }
+    }
 
-	// create visible list of files
-	files.resize(files_found);
-	file_names.resize(files_found);
-	file_names_ptr.resize(files_found);
-	DD_FOREACH(unsigned, index, valid_files) {
-		files[index.i] = unfiltered[*index.ptr];
+    // create visible list of files
+    files.resize(files_found);
+    file_names.resize(files_found);
+    file_names_ptr.resize(files_found);
+    for (unsigned i = 0; i < files_found; i++) {
+      files[i] = unfiltered[valid_files[i]];
 
-		std::string _s = unfiltered[*index.ptr].str();
-		file_names[index.i] = _s.substr(_s.find_last_of("\\/") + 1).c_str();
-		file_names_ptr[index.i] = file_names[index.i].str();
-	}
+      std::string _s = unfiltered[valid_files[i]].str();
+      file_names[i] = _s.substr(_s.find_last_of("\\/") + 1).c_str();
+      file_names_ptr[i] = file_names[i].str();
+    }
+  }
 }

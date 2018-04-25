@@ -26,7 +26,8 @@ do
 		assets.scr_x, assets.scr_y = ddLib.scr_dimensions()
 
 		-- open folder containing smile data
-		load_folder("C:/Users/Moses/Documents/smile_neural_net_processor/input")
+		load_folder(PROJECT_DIR.."/smile_vis/input")
+		groundtruth_folder(PROJECT_DIR.."/smile_vis/ground_truth")
 
 		ddLib.print( "smile_vis init called." )
 	end

@@ -9,6 +9,9 @@ void smile_vis_func_register(lua_State *L);
 /** \brief Load new smile data */
 int load_smile_data(lua_State *L);
 
+/** \brief Log smile data ground truth */
+int log_data_groundtruth(lua_State *L);
+
 // Proxy struct that enables reflection
 struct smile_vis_reflect : public ddLvlPrototype {
   smile_vis_reflect() {
@@ -19,17 +22,27 @@ struct smile_vis_reflect : public ddLvlPrototype {
 void smile_vis_func_register(lua_State *L) {
   // log functions using register_callback_lua
   register_callback_lua(L, "load_graphics", init_gpu_structures);
-	register_callback_lua(L, "smile_UI", load_ui);
-	register_callback_lua(L, "load_folder", load_smile_data);
+  register_callback_lua(L, "smile_UI", load_ui);
+  register_callback_lua(L, "load_folder", load_smile_data);
+  register_callback_lua(L, "groundtruth_folder", log_data_groundtruth);
 }
 
-int load_smile_data(lua_State * L) {
-	// argument contains location of new folder to list files
-	const char* directory = luaL_checkstring(L, 1);
+int load_smile_data(lua_State *L) {
+  // argument contains location of new folder to list files
+  const char *directory = luaL_checkstring(L, 1);
 
-	load_files(directory);
+  load_files(directory);
 
-	return 0;
+  return 0;
+}
+
+int log_data_groundtruth(lua_State *L) {
+  // argument contains location of new folder to list files
+  const char *directory = luaL_checkstring(L, 1);
+
+  load_files(directory, true);
+
+  return 0;
 }
 
 // log reflection

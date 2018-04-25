@@ -6,5 +6,5 @@ uniform mat4 MV;
 uniform mat4 Proj;
 
 void main() {
-    gl_Position = Proj * MV * vec4(VertexPosition, 0.f);
+    gl_Position = MV * vec4(VertexPosition, 1.f);
 }

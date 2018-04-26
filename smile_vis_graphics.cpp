@@ -7,6 +7,16 @@
 #define MAX_POINTS 4
 #define MAX_INDICES 8
 
+struct SController {
+  unsigned curr_idx = 0;
+  unsigned num_frames = 0;
+  float tile_size = 5.f;
+  glm::ivec4 ortho_params = glm::ivec4(0, 1920, 1080, 0);
+  dd_array<glm::vec3> _input;
+  dd_array<glm::vec3> _ground;
+  dd_array<glm::vec3> _predicted;
+};
+
 namespace {
 // Particle engine draw
 ddPTask draw_fdata;
@@ -41,16 +51,159 @@ ddStorageBufferData *point_ssbo = nullptr;
 
 // manipulatible frame data
 FrameData frames[2];
+SController sctrl;
 
 // data points of current visualization
 std::vector<Eigen::VectorXd> input_p;
 
 // data points of ground truth
-std::vector<Eigen::VectorXd> groundtruth_p;
+std::vector<Eigen::VectorXd> groundtr_p;
 
-// data points of calculated network
-std::vector<Eigen::VectorXd> calc_p;
+// weights and biases
+std::vector<Eigen::MatrixXd> weights;
+std::vector<Eigen::VectorXd> biases;
+
+dd_array<int64_t> i64_bin = dd_array<int64_t>(4);
 }  // namespace
+
+//******************************************************************************
+//******************************************************************************
+
+#define SCTR_META_NAME "LuaClass.Controller"
+#define check_sctrl(L) (SController **)luaL_checkudata(L, 1, SCTR_META_NAME)
+
+const size_t idx_var = getCharHash("idx");
+const size_t frames_var = getCharHash("num_frames");
+const size_t tile_var = getCharHash("tile");
+const size_t ortho_var = getCharHash("ortho");
+
+static int set_val(lua_State *L) {
+  SController *ctrl = *check_sctrl(L);
+
+  // check for arguments
+  const int args = (int)lua_gettop(L);
+  if (args == 3) {
+    // arg 2 = name of variable
+    cbuff<32> arg_name = (const char *)luaL_checkstring(L, 2);
+
+    if (arg_name.gethash() == idx_var) {
+      // set current frame
+      ctrl->curr_idx = luaL_checkinteger(L, 3);
+    } else if (arg_name.gethash() == ortho_var) {
+      // set orthographic matric params
+      read_buffer_from_lua(L, i64_bin);
+      ctrl->ortho_params.x = i64_bin[0];
+      ctrl->ortho_params.y = i64_bin[1];
+      ctrl->ortho_params.z = i64_bin[2];
+      ctrl->ortho_params.w = i64_bin[3];
+    } else if (arg_name.gethash() == tile_var) {
+      ctrl->tile_size = luaL_checknumber(L, 3);
+    }
+  }
+  return 0;
+}
+
+static int get_val(lua_State *L) {
+  SController *ctrl = *check_sctrl(L);
+  cbuff<32> arg_name = (const char *)luaL_checkstring(L, 2);
+
+  if (arg_name.gethash() == idx_var) {
+    lua_pushinteger(L, ctrl->curr_idx);
+  } else if (arg_name.gethash() == frames_var) {
+    lua_pushinteger(L, ctrl->num_frames);
+  } else if (arg_name.gethash() == tile_var) {
+    lua_pushnumber(L, ctrl->tile_size);
+  } else if (arg_name.gethash() == ortho_var) {
+    push_ivec4_to_lua(L, ctrl->ortho_params.x, ctrl->ortho_params.y,
+                      ctrl->ortho_params.y, ctrl->ortho_params.z);
+  }
+
+  return 1;
+}
+
+static int to_string(lua_State *L) {
+  SController *ctrl = *check_sctrl(L);
+  std::string buff;
+
+  cbuff<128> out;
+  out.format("\n idx: %d, frames: %d", ctrl->curr_idx, ctrl->num_frames);
+  buff += out.str();
+
+  lua_pushstring(L, buff.c_str());
+  return 1;
+}
+
+static const struct luaL_Reg sctrl_methods[] = {{"__index", get_val},
+                                                {"__newindex", set_val},
+                                                {"__tostring", to_string},
+                                                {NULL, NULL}};
+
+const unsigned sctrl_ptr_size = sizeof(SController *);
+
+static int get_sctrl(lua_State *L) {
+  // create userdata for instance
+  SController **ctrl = (SController **)lua_newuserdata(L, sctrl_ptr_size);
+
+  // assign level controller
+  (*ctrl) = &sctrl;
+
+  // set metatable
+  luaL_getmetatable(L, SCTR_META_NAME);
+  lua_setmetatable(L, -2);
+
+  return 1;
+}
+
+static int get_input_data(lua_State *L) {
+  DD_FOREACH(glm::vec3, point, sctrl._input) {
+    push_vec3_to_lua(L, point.ptr->x, point.ptr->y, point.ptr->z);
+  }
+  return sctrl._input.size();
+}
+
+static int get_ground_data(lua_State *L) {
+  DD_FOREACH(glm::vec3, point, sctrl._ground) {
+    push_vec3_to_lua(L, point.ptr->x, point.ptr->y, point.ptr->z);
+  }
+  return sctrl._ground.size();
+}
+
+static int get_calc_data(lua_State *L) {
+  DD_FOREACH(glm::vec3, point, sctrl._predicted) {
+    push_vec3_to_lua(L, point.ptr->x, point.ptr->y, point.ptr->z);
+  }
+  return sctrl._predicted.size();
+}
+
+static const struct luaL_Reg sctrl_lib[] = {
+    {"get", get_sctrl},
+    {"get_input_data", get_input_data},
+    {"get_ground_data", get_ground_data},
+    {"get_calc_data", get_calc_data},
+    {NULL, NULL}};
+
+int luaopen_sctrl(lua_State *L) {
+  // get and log functions in metatable
+  luaL_newmetatable(L, SCTR_META_NAME);  // create meta table
+  lua_pushvalue(L, -1);                  /* duplicate the metatable */
+  lua_setfield(L, -2, "__index");        /* mt.__index = mt */
+  luaL_setfuncs(L, sctrl_methods, 0);    /* register metamethods */
+
+  // library functions
+  luaL_newlib(L, sctrl_lib);
+  return 1;
+}
+
+void register_lua_controller(lua_State *L) {
+  // log libraries
+  luaL_requiref(L, "SController", luaopen_sctrl, 1);
+  // clear stack
+  int top = lua_gettop(L);
+  lua_pop(L, top);
+}
+
+//******************************************************************************
+//******************************************************************************
 
 /** \brief Draws FrameData for particle task */
 void draw_frame();
@@ -160,26 +313,59 @@ void draw_frame() {
     ddGPUFrontEnd::bind_framebuffer(ddBufferType::XTRA);
     ddGPUFrontEnd::clear_color_buffer();
 
+    // data vector
+    if (input_p.size() > 0) {
+      get_points(input_p, sctrl._input, sctrl.curr_idx, VectorOut::INPUT);
+      ddGPUFrontEnd::set_storage_buffer_contents(
+          point_ssbo, sctrl._input.sizeInBytes(), 0, &sctrl._input[0]);
+    }
+
     // get camera matrices & activate point shader
     const glm::mat4 v_mat = ddSceneManager::calc_view_matrix(cam);
-    const glm::mat4 p_mat =
-         ddSceneManager::calc_o_proj_matrix(cam, 900, 1100, 700, 500);
-    //const glm::mat4 p_mat = ddSceneManager::calc_p_proj_matrix(cam);
+    const glm::mat4 p_mat = ddSceneManager::calc_o_proj_matrix(
+        cam, sctrl.ortho_params.x, sctrl.ortho_params.y, sctrl.ortho_params.z,
+        sctrl.ortho_params.w);
+    // const glm::mat4 p_mat = ddSceneManager::calc_p_proj_matrix(cam);
+
     point_sh.use();
 
     // draw feature points
-    glm::mat4 m_mat = glm::scale(glm::mat4(), glm::vec3(1.f));
+    glm::mat4 m_mat = glm::scale(glm::mat4(), glm::vec3(1.f, 1.f, 1.f));
     point_sh.set_uniform((int)RE_Point::MV_m4x4, v_mat * m_mat);
     point_sh.set_uniform((int)RE_Point::Proj_m4x4, p_mat);
-    point_sh.set_uniform((int)RE_Point::quad_h_width_f, 10.f);
+    point_sh.set_uniform((int)RE_Point::quad_h_width_f, sctrl.tile_size);
     point_sh.set_uniform((int)RE_Point::color_v4, glm::vec4(1.f));
 
-    if (input_p.size() > 0) {
-      std::vector<glm::vec3> data_i = std::move(get_points(input_p, 0, VectorOut::INPUT));
-      //dd_array<glm::vec3> data_i(1); data_i[0] = glm::vec3(0.f, 0.f, 0.f);
-      ddGPUFrontEnd::set_storage_buffer_contents(point_ssbo, data_i.size() * sizeof(glm::vec3),
-                                             0, &data_i[0]);
-      ddGPUFrontEnd::draw_points(point_vao, point_ssbo, ddAttribPrimitive::FLOAT, 0, 3, 3, 0, 0, data_i.size());
+    if (sctrl._input.size() > 0) {
+      ddGPUFrontEnd::draw_points(point_vao, point_ssbo,
+                                 ddAttribPrimitive::FLOAT, 0, 3, 3, 0, 0,
+                                 sctrl._input.size());
+    }
+
+    // ground truth
+    if (sctrl._ground.size() > 0) {
+      point_sh.set_uniform((int)RE_Point::color_v4,
+                           glm::vec4(0.f, 1.f, 0.f, 1.f));
+      get_points(groundtr_p, sctrl._ground, sctrl.curr_idx, VectorOut::OUTPUT);
+      ddGPUFrontEnd::set_storage_buffer_contents(
+          point_ssbo, sctrl._ground.sizeInBytes(), 0, &sctrl._ground[0]);
+      ddGPUFrontEnd::draw_points(point_vao, point_ssbo,
+                                 ddAttribPrimitive::FLOAT, 0, 3, 3, 0, 0,
+                                 sctrl._ground.size());
+    }
+
+    // predicted
+    if (sctrl._predicted.size() > 0) {
+      // update calculated points
+      get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
+
+      point_sh.set_uniform((int)RE_Point::color_v4,
+                           glm::vec4(1.f, 0.f, 0.f, 1.f));
+      ddGPUFrontEnd::set_storage_buffer_contents(
+          point_ssbo, sctrl._predicted.sizeInBytes(), 0, &sctrl._predicted[0]);
+      ddGPUFrontEnd::draw_points(point_vao, point_ssbo,
+                                 ddAttribPrimitive::FLOAT, 0, 3, 3, 0, 0,
+                                 sctrl._predicted.size());
     }
 
     // render frame cutout (right side) ****************************************
@@ -206,9 +392,13 @@ void draw_frame() {
     ddGPUFrontEnd::bind_pass_texture(ddBufferType::XTRA, 0);
     linedot_sh.set_uniform((int)RE_LineDot::bound_tex_smp2d, 0);
 
-    // render right side cutout
+    // render right side cutout (flip image in y axis)
     refill_buffer(frames[0]);
+    ddGPUFrontEnd::toggle_face_cull(false);
+    m_mat = glm::scale(glm::mat4(), glm::vec3(1.f, -1.f, 1.f));
+    linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity * m_mat);
     ddGPUFrontEnd::render_primitive(6, point_buff, texcoord_buff);
+    ddGPUFrontEnd::toggle_face_cull(true);
     // render border
     linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
     linedot_sh.set_uniform((int)RE_LineDot::color_v4, glm::vec4(1.f));
@@ -322,7 +512,7 @@ int load_ui(lua_State *L) {
   ImGui::Begin("Smile Visualization", &win_on, window_flags);
 
   // stop edge clipping
-  ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.75f);
+  ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.7f);
 
   // show list of selectable files
   ImColor col(1.f, 0.85f, 0.f);
@@ -340,10 +530,20 @@ int load_ui(lua_State *L) {
 
     // button to load data
     if (ImGui::Button("Load selected")) {
+      // load input
       input_p = extract_vector2(files[selected_file].str());
-      std::string temp = gd_dir.str() + std::string("/") + 
-        std::string(file_names_ptr[selected_file]);
-      groundtruth_p = extract_vector2(temp.c_str());
+      // load ground truth
+      std::string temp = gd_dir.str() + std::string("/") +
+                         std::string(file_names_ptr[selected_file]);
+      groundtr_p = extract_vector2(temp.c_str());
+
+      // set frame count
+      sctrl.curr_idx = 0;
+      sctrl.num_frames = input_p.size();
+      // set array sizes
+      get_points(input_p, sctrl._input, sctrl.curr_idx, VectorOut::INPUT);
+      get_points(groundtr_p, sctrl._ground, sctrl.curr_idx, VectorOut::OUTPUT);
+      get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
     }
   } else {
     ImGui::PushStyleColor(ImGuiCol_Text, col);
@@ -351,6 +551,88 @@ int load_ui(lua_State *L) {
     ImGui::PopStyleColor();
   }
   ImGui::Separator();
+
+  if (sctrl._input.size() > 0) {
+    // difference
+    unsigned idx = 0;
+    // Lateral canthus
+    ImGui::Text("Lateral canthus (L)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Lateral canthus (R)
+    ImGui::Text("Lateral canthus (R)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Palpebral fissure (RU)
+    ImGui::Text("Palpebral fissure (RU)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Palpebral fissure (RL)
+    ImGui::Text("Palpebral fissure (RL)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Palpebral fissure (LU)
+    ImGui::Text("Palpebral fissure (LU)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Palpebral fissure (LL)
+    ImGui::Text("Palpebral fissure (LL)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Depressor (L)
+    ImGui::Text("Depressor (L)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Depressor (R)
+    ImGui::Text("Depressor (R)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Depressor (M)
+    ImGui::Text("Depressor (M)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Iris (M)
+    ImGui::Text("Iris (M)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Iris (L)
+    ImGui::Text("Iris (L)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Nasal ala (L)
+    ImGui::Text("Nasal ala (L)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Nasal ala (R)
+    ImGui::Text("Nasal ala (R)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Medial brow (L)
+    ImGui::Text("Medial brow (L)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Medial brow (R)
+    ImGui::Text("Medial brow (R)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Malar eminence (L) x,Malar eminence (L) y,
+    // Malar eminence (R) x,Malar eminence (R) y
+  }
 
   ImGui::PopItemWidth();
   ImGui::End();
@@ -390,6 +672,36 @@ void load_files(const char *directory, const bool ground_truth) {
       std::string _s = unfiltered[valid_files[i]].str();
       file_names[i] = _s.substr(_s.find_last_of("\\/") + 1).c_str();
       file_names_ptr[i] = file_names[i].str();
+    }
+  }
+}
+
+void load_weights(const char *directory) {
+  // open folder & extract files
+  ddIO folder_handle;
+  folder_handle.open(directory, ddIOflag::DIRECTORY);
+  dd_array<cbuff<512>> unfiltered = folder_handle.get_directory_files();
+
+  // check if file contains .csv
+  DD_FOREACH(cbuff<512>, file, unfiltered) {
+    // load up matching files
+    if (file.ptr->contains(".csv")) {
+      weights.push_back(extract_matrix(file.ptr->str()));
+    }
+  }
+}
+
+void load_biases(const char *directory) {
+  // open folder & extract files
+  ddIO folder_handle;
+  folder_handle.open(directory, ddIOflag::DIRECTORY);
+  dd_array<cbuff<512>> unfiltered = folder_handle.get_directory_files();
+
+  // check if file contains .csv
+  DD_FOREACH(cbuff<512>, file, unfiltered) {
+    // load up matching files
+    if (file.ptr->contains(".csv")) {
+      biases.push_back(extract_vector(file.ptr->str()));
     }
   }
 }

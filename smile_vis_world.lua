@@ -3,6 +3,7 @@
 do
 	matrix = require "scripts.matrix"
 	actor_prototype = require "smile_vis.smile_vis_actor"
+	data_m = require "smile_vis.smile_vis_data_manager"
 
 	smile_vis = {}
 
@@ -21,6 +22,13 @@ do
 		dd_register_callback(smile_vis.actor.name, smile_vis.actor)
 		-- Subscribe to smile_vis_world generated callback
 		dd_subscribe( {key = smile_vis.actor.name, event = level_tag} )
+		
+		-- subscribe data manager
+		data_m.name = "smile_data_manager"
+		data_m.data = SController:get()		
+		data_m.data.tile = 2.0
+		dd_register_callback(data_m.name, data_m)
+		dd_subscribe( {key = data_m.name, event = level_tag} )
 
 		-- log screen dimensions
 		assets.scr_x, assets.scr_y = ddLib.scr_dimensions()
@@ -28,6 +36,7 @@ do
 		-- open folder containing smile data
 		load_folder(PROJECT_DIR.."/smile_vis/input")
 		groundtruth_folder(PROJECT_DIR.."/smile_vis/ground_truth")
+		w_b_folders(PROJECT_DIR.."/smile_vis/weight",PROJECT_DIR.."/smile_vis/bias")
 
 		ddLib.print( "smile_vis init called." )
 	end

@@ -21,3 +21,12 @@ int load_ui(lua_State* L);
 
 /** \brief Sets the list of files visible in menu */
 void load_files(const char* directory, const bool ground_truth = false);
+
+/** \brief Sets weights */
+void load_weights(const char* directory);
+
+/** \brief Sets biases */
+void load_biases(const char* directory);
+
+/** \brief Log lua library for controlling data & frames */
+void register_lua_controller(lua_State* L);

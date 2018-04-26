@@ -17,7 +17,9 @@ std::vector<double> feedForward(Eigen::VectorXd& inputs,
                 << i << "!!";
       std::cout << "Input size: " << layerin.size()
                 << ", expected size: " << weights[i].rows() << std::endl;
-      std::exit(1);
+      POW2_VERIFY_MSG(
+          weights[i].rows() != layerin.size(),
+          "Input and weights have incompatible dimensions at layer %d", i);
     }
     layerin = weights[i].transpose() * layerin + biases[i];
     // component wise RELU
@@ -149,82 +151,168 @@ Eigen::MatrixXd extract_matrix(const char* in_file) {
   return out_mat;
 }
 
-std::vector<glm::vec3> get_points(std::vector<Eigen::VectorXd>& v_bin,
-                                  const unsigned idx, const VectorOut type) {
-  std::vector<glm::vec3> out_points;
+void get_points(std::vector<Eigen::VectorXd>& v_bin,
+                dd_array<glm::vec3>& out_bin, const unsigned idx,
+                const VectorOut type) {
+  if (type == VectorOut::INPUT) {
+    // use all values
+    if ((int)out_bin.size() != (v_bin[idx].size() / 2)) {
+      out_bin.resize(v_bin[idx].size() / 2);
+    }
 
-	if (type == VectorOut::INPUT) {
-		// use all values
-		out_points.resize(v_bin[idx].size()/2);
-		unsigned c_idx = 0;
+    unsigned c_idx = 0;
 
-		// Oral commisure (L) x,Oral commisure (L) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Oral commisure (R) x,Oral commisure (R) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Dental show (Top) x,Dental show (Top) y, 
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Dental show (Bottom) x, Dental show (Bottom) y
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-	} else {
-		// skip 1st 4 values (remove delta values)
-		out_points.resize((v_bin[idx].size() - 4)/2);
-		unsigned c_idx = 2;
+    // Oral commisure (L) x,Oral commisure (L) y,
+    out_bin[c_idx] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Oral commisure (R) x,Oral commisure (R) y,
+    out_bin[c_idx] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Dental show (Top) x,Dental show (Top) y,
+    out_bin[c_idx] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Dental show (Bottom) x, Dental show (Bottom) y
+    out_bin[c_idx] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+  } else {
+    // skip 1st 4 values (remove delta values)
+    if ((int)out_bin.size() != ((v_bin[idx].size() - 4) / 2)) {
+      out_bin.resize((v_bin[idx].size() - 4) / 2);
+    }
+    unsigned c_idx = 2;
 
-		// Lateral canthus (L) x,Lateral canthus (L) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Lateral canthus (R) x,Lateral canthus (R) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Palpebral fissure (RU) x,Palpebral fissure (RU) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Palpebral fissure (RL) x,Palpebral fissure (RL) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Palpebral fissure (LU) x,Palpebral fissure (LU) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Palpebral fissure (LL) x,Palpebral fissure (LL) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Depressor (L) x,Depressor (L) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Depressor (R) x,Depressor (R) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Depressor (M) x,Depressor (M) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Iris (M) x,Iris (M) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Iris (L) x,Iris (L) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Nasal ala (L) x,Nasal ala (L) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Nasal ala (R) x,Nasal ala (R) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Medial brow (L) x,Medial brow (L) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Medial brow (R) x,Medial brow (R) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Malar eminence (L) x,Malar eminence (L) y,
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-		c_idx++;
-		// Malar eminence (R) x,Malar eminence (R) y
-		out_points[c_idx] = glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
-	}
+    // Lateral canthus (L) x,Lateral canthus (L) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Lateral canthus (R) x,Lateral canthus (R) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Palpebral fissure (RU) x,Palpebral fissure (RU) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Palpebral fissure (RL) x,Palpebral fissure (RL) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Palpebral fissure (LU) x,Palpebral fissure (LU) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Palpebral fissure (LL) x,Palpebral fissure (LL) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Depressor (L) x,Depressor (L) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Depressor (R) x,Depressor (R) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Depressor (M) x,Depressor (M) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Iris (M) x,Iris (M) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Iris (L) x,Iris (L) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Nasal ala (L) x,Nasal ala (L) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Nasal ala (R) x,Nasal ala (R) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Medial brow (L) x,Medial brow (L) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Medial brow (R) x,Medial brow (R) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Malar eminence (L) x,Malar eminence (L) y,
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+    c_idx++;
+    // Malar eminence (R) x,Malar eminence (R) y
+    out_bin[c_idx - 2] =
+        glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
+  }
+}
 
-  return out_points;
+void get_points(Eigen::VectorXd& input, std::vector<Eigen::MatrixXd>& weights,
+                std::vector<Eigen::VectorXd>& biases,
+                dd_array<glm::vec3>& output) {
+  std::vector<double> out_d = feedForward(input, weights, biases);
+
+  // skip 1st 4 values
+  if (output.size() != ((out_d.size() - 4) / 2)) {
+    output.resize((out_d.size() - 4) / 2);
+  }
+  unsigned c_idx = 2;
+
+  // Lateral canthus (L) x,Lateral canthus (L) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Lateral canthus (R) x,Lateral canthus (R) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Palpebral fissure (RU) x,Palpebral fissure (RU) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Palpebral fissure (RL) x,Palpebral fissure (RL) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Palpebral fissure (LU) x,Palpebral fissure (LU) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Palpebral fissure (LL) x,Palpebral fissure (LL) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Depressor (L) x,Depressor (L) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Depressor (R) x,Depressor (R) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Depressor (M) x,Depressor (M) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Iris (M) x,Iris (M) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Iris (L) x,Iris (L) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Nasal ala (L) x,Nasal ala (L) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Nasal ala (R) x,Nasal ala (R) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Medial brow (L) x,Medial brow (L) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Medial brow (R) x,Medial brow (R) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Malar eminence (L) x,Malar eminence (L) y,
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  c_idx++;
+  // Malar eminence (R) x,Malar eminence (R) y
+  output[c_idx - 2] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
 }

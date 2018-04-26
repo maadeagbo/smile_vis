@@ -630,8 +630,16 @@ int load_ui(lua_State *L) {
     ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
     ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
     idx++;
-    // Malar eminence (L) x,Malar eminence (L) y,
-    // Malar eminence (R) x,Malar eminence (R) y
+    // Malar eminence (L)
+    ImGui::Text("Malar eminence (L)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
+    // Malar eminence (R)
+    ImGui::Text("Malar eminence (R)");
+    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
+    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
+    idx++;
   }
 
   ImGui::PopItemWidth();

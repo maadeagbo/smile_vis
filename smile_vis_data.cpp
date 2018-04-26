@@ -55,7 +55,7 @@ Eigen::VectorXd extract_vector(const char* in_file) {
     line = vec_io.readNextLine();
     unsigned idx = 0;
     while (line && *line) {
-      out_vec(idx) = std::strtof(line, NULL);
+      out_vec(idx) = std::strtod(line, NULL);
 
       line = vec_io.readNextLine();
       idx++;
@@ -89,10 +89,10 @@ std::vector<Eigen::VectorXd> extract_vector2(const char* in_file) {
       unsigned r_idx = 0;
       const char* curr_row = line;
       while (*curr_row) {
-        char* nxt_float = nullptr;
+        char* nxt_dbl = nullptr;
         // printf("%s\n", curr_row);
-        out_vec[idx](r_idx) = std::strtof(curr_row, &nxt_float);
-        curr_row = nxt_float;
+        out_vec[idx](r_idx) = std::strtod(curr_row, &nxt_dbl);
+        curr_row = nxt_dbl;
 
         r_idx++;
       }
@@ -134,10 +134,10 @@ Eigen::MatrixXd extract_matrix(const char* in_file) {
       unsigned c_idx = 0;
       const char* curr_row = line;
       while (*curr_row) {
-        char* nxt_float = nullptr;
+        char* nxt_dbl = nullptr;
         // printf("%s\n", curr_row);
-        out_mat(r_idx, c_idx) = std::strtof(curr_row, &nxt_float);
-        curr_row = nxt_float;
+        out_mat(r_idx, c_idx) = std::strtod(curr_row, &nxt_dbl);
+        curr_row = nxt_dbl;
 
         c_idx++;
       }

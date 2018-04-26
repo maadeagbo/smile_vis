@@ -7,7 +7,7 @@ do
   bounds_max = {0, 0}
 
   time_tracker = 0.0
-  fps = 1.0/30.0
+  fps = 1.0/20.0
 
   function set_bounds( point ) 
     -- set min
@@ -49,7 +49,7 @@ do
       end
 
       for i=1,#p_calc do
-        --set_bounds(p_calc[i])
+        set_bounds(p_calc[i])
       end
 
       -- add a bit of an offset

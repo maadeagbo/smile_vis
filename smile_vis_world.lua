@@ -26,7 +26,7 @@ do
 		-- subscribe data manager
 		data_m.name = "smile_data_manager"
 		data_m.data = SController:get()		
-		data_m.data.tile = 2.0
+		data_m.data.tile = 3.0
 		dd_register_callback(data_m.name, data_m)
 		dd_subscribe( {key = data_m.name, event = level_tag} )
 

@@ -553,6 +553,7 @@ int load_ui(lua_State *L) {
   ImGui::Separator();
 
   if (sctrl._input.size() > 0) {
+  //if (false) {
     // difference
     unsigned idx = 0;
     // Lateral canthus
@@ -601,15 +602,7 @@ int load_ui(lua_State *L) {
     ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
     idx++;
     // Iris (M)
-    ImGui::Text("Iris (M)");
-    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
-    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
-    idx++;
     // Iris (L)
-    ImGui::Text("Iris (L)");
-    ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);
-    ImGui::InputFloat2("predict", &sctrl._predicted[idx][0]);
-    idx++;
     // Nasal ala (L)
     ImGui::Text("Nasal ala (L)");
     ImGui::InputFloat2("ground", &sctrl._ground[idx][0]);

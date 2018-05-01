@@ -29,6 +29,7 @@ do
 		data_m.data.tile = 3.0
 		dd_register_callback(data_m.name, data_m)
 		dd_subscribe( {key = data_m.name, event = level_tag} )
+		dd_subscribe( {key = data_m.name, event = "calc_offset"} )
 
 		-- log screen dimensions
 		assets.scr_x, assets.scr_y = ddLib.scr_dimensions()

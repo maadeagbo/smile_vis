@@ -9,6 +9,9 @@ do
   time_tracker = 0.0
   fps = 1.0/20.0
 
+  ideal_lat_iris_pos = { 0.100, 0.900 }
+  ideal_lat_iris_dist = 0.05
+
   function set_bounds( point ) 
     -- set min
     bounds_min[1] = (point.x < bounds_min[1]) and point.x or bounds_min[1]
@@ -26,14 +29,21 @@ do
         ddLib.print("No smile file loaded")
       else
         p_in = { SController.get_input_data() } -- input
+        p_gt = { SController.get_ground_data() } -- ground truth
         p_calc = { SController.get_calc_data() } -- output
 
         -- get translation offset
-        t_vec = p_calc[10]
-        t_vec = matrix{ -t_vec.x, -t_vec.y }
-        ddLib.print("Translation vector(", #p_calc, "): ", t_vec[1][1], ",", t_vec[2][1])
+        t_vec = p_in[3]
+        t_vec = { -t_vec.x, -t_vec.y }
+        ddLib.print("Translation vector(", #p_calc, "): ", t_vec[1], ",", t_vec[2])
         
         -- apply delta translation to all points
+        for i=1,#p_in do
+          ddLib.print("  #", i, " = ", p_in[i].x, ", ", p_in[i].y)
+          p_in[i].x = p_in[i].x + t_vec[1]
+          p_in[i].y = p_in[i].y + t_vec[2]
+          ddLib.print("  --->", p_in[i].x, ", ", p_in[i].y)
+        end
 
         -- get rotation offset b/t lateral & medial iris
         -- math.atan2(l_iris_y, l_iris_x)

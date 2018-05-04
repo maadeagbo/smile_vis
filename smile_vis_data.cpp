@@ -237,3 +237,131 @@ void get_points(Eigen::VectorXd& input, std::vector<Eigen::MatrixXd>& weights,
   // Malar eminence (L) x,Malar eminence (L) y,
   // Malar eminence (R) x,Malar eminence (R) y
 }
+
+void export_canonical_data(dd_array<glm::vec3>& input, 
+                            dd_array<glm::vec3>& ground,
+                            const char* dir, const char* file_id,
+                            const glm::vec2 canonical_iris_pos,
+                            const float canonical_iris_dist) {
+  // create new file
+  std::string f_id = file_id;
+  f_id = f_id.substr(0, 7);
+  cbuff<512> out_f_name, out_fg_name;
+  out_f_name.format("%s/%s_canon.csv", dir, f_id.c_str());
+  out_fg_name.format("%s/%s_canon_g.csv", dir, f_id.c_str());
+  ddTerminal::f_post("Creating: %s", out_f_name.str());
+
+  // get translation offset (Iris (M) x,Iris (M) y)
+  const unsigned iris_m_idx = 2;
+  const unsigned iris_l_idx = 3;
+  const glm::vec2 delta_pos = glm::vec2(-input[iris_m_idx]);
+
+  // apply delta translation to all points
+  dd_array<glm::vec2> input_n(input.size());
+  dd_array<glm::vec2> ground_n(ground.size());
+
+  DD_FOREACH(glm::vec3, vec, input) { // input
+    input_n[vec.i] = glm::vec2(*vec.ptr) + delta_pos;
+  }
+  DD_FOREACH(glm::vec3, vec, ground) { // ground truth
+    ground_n[vec.i] = glm::vec2(*vec.ptr) + delta_pos;
+  }
+
+  // get rotation offset b/t lateral & medial iris
+  const float rot_offset = atan2(input_n[iris_l_idx].y, input_n[iris_l_idx].x);
+  glm::mat2 r_mat;
+  r_mat[0][0] = glm::cos(rot_offset);
+  r_mat[0][1] = glm::sin(rot_offset);
+  r_mat[1][0] = -glm::sin(rot_offset);
+  r_mat[1][1] = glm::cos(rot_offset);
+
+  // apply negative rotation to all points (at the current pos)
+  r_mat = glm::transpose(r_mat);
+  DD_FOREACH(glm::vec2, vec, input_n) { // input
+    input_n[vec.i] = r_mat * (*vec.ptr);
+  }
+  DD_FOREACH(glm::vec2, vec, ground_n) { // ground
+    ground_n[vec.i] = r_mat * (*vec.ptr);
+  }
+
+  // scale points so that iris distance is set to a canonical distance
+  const float dist = glm::distance(input_n[iris_l_idx], input_n[iris_m_idx]);
+  const float scale_factor = canonical_iris_dist/dist;
+  glm::mat2 s_mat;
+  s_mat[0][0] = s_mat[1][1] = scale_factor;
+  s_mat[0][1] = s_mat[1][0] = 0.f;
+
+  DD_FOREACH(glm::vec2, vec, input_n) { // input
+    input_n[vec.i] = s_mat * (*vec.ptr);
+  }
+  DD_FOREACH(glm::vec2, vec, ground_n) { // ground
+    ground_n[vec.i] = s_mat * (*vec.ptr);
+  }
+
+  // apply translation to all points to move iris to canonical position
+  DD_FOREACH(glm::vec3, vec, input) {
+    //ddTerminal::f_post("#%u : %.3f, %.3f", vec.i, vec.ptr->x, vec.ptr->y);
+    input_n[vec.i] = input_n[vec.i] + canonical_iris_pos;
+    //ddTerminal::f_post("----> %.3f, %.3f", input_n[vec.i].x, input_n[vec.i].y);
+    ground_n[vec.i] = ground_n[vec.i] + canonical_iris_pos;
+  }
+
+  // write out input and ground file
+  ddIO i_out, g_out;
+  i_out.open(out_f_name.str(), ddIOflag::APPEND);
+  std::string out_str;
+  std::string _sp(" ");
+  DD_FOREACH(glm::vec2, vec, input_n) {
+    out_str += std::to_string(vec.ptr->x) + _sp + std::to_string(vec.ptr->y) +
+      _sp;
+  }
+  out_str.pop_back();
+  out_str += "\n";
+  //ddTerminal::post(out_str.c_str());
+  i_out.writeLine(out_str.c_str());
+
+  g_out.open(out_fg_name.str(), ddIOflag::APPEND);
+  out_str = "";
+  DD_FOREACH(glm::vec2, vec, ground_n) {
+    out_str += std::to_string(vec.ptr->x) + _sp + std::to_string(vec.ptr->y) +
+      _sp;
+  }
+  out_str.pop_back();
+  out_str += "\n";
+  g_out.writeLine(out_str.c_str());
+}
+
+
+void export_canonical_data(const char* input_dir, const char* ground_dir,
+                           const glm::vec2 canonical_iris_pos,
+                           const float canonical_iris_dist) {
+  // export input files
+  ddIO io_input;
+  bool success = io_input.open(input_dir, ddIOflag::DIRECTORY);
+  if (success) {
+    // for each file:
+    dd_array<cbuff<512>> _files = io_input.get_directory_files();
+    ddTerminal::f_post("Opening dir: %s..", input_dir);
+    DD_FOREACH(cbuff<512>, file, _files) {
+      // get name of file
+      const std::string temp = file.ptr->str();
+      const size_t idx = temp.find_last_of("\\/");
+      const std::string f_name = temp.substr(idx + 1);
+      ddTerminal::f_post("  File: %s", f_name.c_str());
+
+      // create output file (_canon.csv)
+
+      // extract contents of each file and convert to glm vectors
+      // loop thru lines fo each and write to output file
+    }
+  }
+  // export ground truth files
+  success = io_input.open(ground_dir, ddIOflag::DIRECTORY);
+  if (success) {
+    // for each file:
+    // get name of file
+    // create output file (_canon.csv)
+    // extract contents of each file (eigen vectors) and convert to glm vectors
+    // loop thru lines fo each and write to output file
+  }
+}

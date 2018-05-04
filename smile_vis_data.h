@@ -28,3 +28,15 @@ void get_points(std::vector<Eigen::VectorXd>& v_bin,
 void get_points(Eigen::VectorXd& input, std::vector<Eigen::MatrixXd>& weights,
                 std::vector<Eigen::VectorXd>& biases,
                 dd_array<glm::vec3>& output);
+
+/** \brief Export data into calibrated space */
+void export_canonical_data(dd_array<glm::vec3>& input, 
+                            dd_array<glm::vec3>& ground,
+                            const char* dir, const char* file_id,
+                            const glm::vec2 canonical_iris_pos,
+                            const float canonical_iris_dist);
+
+/** \brief Export data into calibrated space by folder */
+void export_canonical_data(const char* input_dir, const char* ground_dir,
+                           const glm::vec2 canonical_iris_pos,
+                           const float canonical_iris_dist);

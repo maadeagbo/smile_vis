@@ -63,7 +63,11 @@ std::vector<Eigen::VectorXd> groundtr_p;
 std::vector<Eigen::MatrixXd> weights;
 std::vector<Eigen::VectorXd> biases;
 
+// int buffer for pulling values from lua
 dd_array<int64_t> i64_bin = dd_array<int64_t>(4);
+
+// asynchronous function for exporting input
+std::future<void> async_canonical;
 }  // namespace
 
 //******************************************************************************
@@ -544,6 +548,25 @@ int load_ui(lua_State *L) {
       get_points(input_p, sctrl._input, sctrl.curr_idx, VectorOut::INPUT);
       get_points(groundtr_p, sctrl._ground, sctrl.curr_idx, VectorOut::OUTPUT);
       get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
+    }
+
+    // button to create & export data in canonical space
+    ImGui::SameLine();
+    if (ImGui::Button("Export canonical") && sctrl.num_frames > 0) {
+      const glm::vec2 canon_point(0.3f, 0.9f);
+      const float canon_space = 0.05f;
+      
+      // loop thru 
+      dd_array<glm::vec3> temp_in(sctrl._input.size());
+      dd_array<glm::vec3> temp_g(sctrl._ground.size());
+      for(unsigned i = 0; i < sctrl.num_frames; i++) {
+        get_points(input_p, temp_in, i, VectorOut::INPUT);
+        get_points(groundtr_p, temp_g, i, VectorOut::OUTPUT);
+        
+        export_canonical_data(temp_in, temp_g, f_dir.str(), 
+                            file_names_ptr[selected_file],
+                            canon_point, canon_space);
+      }
     }
   } else {
     ImGui::PushStyleColor(ImGuiCol_Text, col);

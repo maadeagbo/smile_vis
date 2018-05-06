@@ -379,7 +379,7 @@ void draw_frame() {
     linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, p_mat * v_mat * m_mat);
     linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, false);
     linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
-    ddGPUFrontEnd::render_cube();
+    //ddGPUFrontEnd::render_cube();
 
     // render the background
     linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity);
@@ -546,27 +546,36 @@ int load_ui(lua_State *L) {
       sctrl.num_frames = input_p.size();
       // set array sizes
       get_points(input_p, sctrl._input, sctrl.curr_idx, VectorOut::INPUT);
-      get_points(groundtr_p, sctrl._ground, sctrl.curr_idx, VectorOut::OUTPUT);
-      get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
+			if (file_names[selected_file].contains("canon")) {
+				get_points(groundtr_p, sctrl._ground, sctrl.curr_idx, VectorOut::OUTPUT_C);
+				get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
+			} else {
+				get_points(groundtr_p, sctrl._ground, sctrl.curr_idx, VectorOut::OUTPUT);
+				get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
+			}
     }
 
     // button to create & export data in canonical space
     ImGui::SameLine();
-    if (ImGui::Button("Export canonical") && sctrl.num_frames > 0) {
-      const glm::vec2 canon_point(0.3f, 0.9f);
-      const float canon_space = 0.05f;
-      
-      // loop thru 
-      dd_array<glm::vec3> temp_in(sctrl._input.size());
+    if (ImGui::Button("Export canonical")) {
+      const glm::vec2 canon_point(-0.5f, 0.f);
+      const float canon_space = 1.0f;
+
+      // loop thru
+      /*dd_array<glm::vec3> temp_in(sctrl._input.size());
       dd_array<glm::vec3> temp_g(sctrl._ground.size());
       for(unsigned i = 0; i < sctrl.num_frames; i++) {
         get_points(input_p, temp_in, i, VectorOut::INPUT);
         get_points(groundtr_p, temp_g, i, VectorOut::OUTPUT);
         
-        export_canonical_data(temp_in, temp_g, f_dir.str(), 
+
+        export_canonical_data(temp_in, temp_g, f_dir.str(),
                             file_names_ptr[selected_file],
                             canon_point, canon_space);
-      }
+      }*/
+      async_canonical =
+          std::async(std::launch::async, export_canonical, f_dir.str(),
+                     gd_dir.str(), canon_point, canon_space);
     }
   } else {
     ImGui::PushStyleColor(ImGuiCol_Text, col);
@@ -576,7 +585,7 @@ int load_ui(lua_State *L) {
   ImGui::Separator();
 
   if (sctrl._input.size() > 0) {
-  //if (false) {
+    // if (false) {
     // difference
     unsigned idx = 0;
     // Lateral canthus
@@ -680,7 +689,7 @@ void load_files(const char *directory, const bool ground_truth) {
     unsigned files_found = 0;
     DD_FOREACH(cbuff<512>, file, unfiltered) {
       // capture index of matching files
-      if (file.ptr->contains("_s_out") || file.ptr->contains("_v_out")) {
+      if (file.ptr->contains("_s_") || file.ptr->contains("_v_")) {
         valid_files[files_found] = file.i;
         files_found++;
       }

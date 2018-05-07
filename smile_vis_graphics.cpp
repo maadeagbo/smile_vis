@@ -3,6 +3,7 @@
 #include "ddTerminal.h"
 #include "smile_vis_data.h"
 #include "svis_shader_enums.h"
+#include "imgui_tabs.h"
 
 #define MAX_POINTS 4
 #define MAX_INDICES 8
@@ -234,7 +235,7 @@ int init_gpu_structures(lua_State *L) {
 
   init_data();
 
-  set_imgui_style();
+  // set_imgui_style();
 
   // shader init
   cbuff<256> fname;
@@ -379,7 +380,7 @@ void draw_frame() {
     linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, p_mat * v_mat * m_mat);
     linedot_sh.set_uniform((int)RE_LineDot::send_to_back_b, false);
     linedot_sh.set_uniform((int)RE_LineDot::render_to_tex_b, false);
-    //ddGPUFrontEnd::render_cube();
+    // ddGPUFrontEnd::render_cube();
 
     // render the background
     linedot_sh.set_uniform((int)RE_LineDot::MVP_m4x4, identity);
@@ -466,7 +467,7 @@ void set_imgui_style() {
       ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
   style->Colors[ImGuiCol_ScrollbarGrabActive] =
       ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-  style->Colors[ImGuiCol_ComboBg] = ImVec4(0.19f, 0.18f, 0.21f, 1.00f);
+  // style->Colors[ImGuiCol_ComboBg] = ImVec4(0.19f, 0.18f, 0.21f, 1.00f);
   style->Colors[ImGuiCol_CheckMark] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
   style->Colors[ImGuiCol_SliderGrab] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
   style->Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
@@ -483,11 +484,11 @@ void set_imgui_style() {
   style->Colors[ImGuiCol_ResizeGripHovered] =
       ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
   style->Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-  style->Colors[ImGuiCol_CloseButton] = ImVec4(0.40f, 0.39f, 0.38f, 0.16f);
-  style->Colors[ImGuiCol_CloseButtonHovered] =
-      ImVec4(0.40f, 0.39f, 0.38f, 0.39f);
-  style->Colors[ImGuiCol_CloseButtonActive] =
-      ImVec4(0.40f, 0.39f, 0.38f, 1.00f);
+  // style->Colors[ImGuiCol_CloseButton] = ImVec4(0.40f, 0.39f, 0.38f, 0.16f);
+  // style->Colors[ImGuiCol_CloseButtonHovered] =
+  // ImVec4(0.40f, 0.39f, 0.38f, 0.39f);
+  // style->Colors[ImGuiCol_CloseButtonActive] =
+  // ImVec4(0.40f, 0.39f, 0.38f, 1.00f);
   style->Colors[ImGuiCol_PlotLines] = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
   style->Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
   style->Colors[ImGuiCol_PlotHistogram] = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
@@ -519,7 +520,7 @@ int load_ui(lua_State *L) {
   ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.7f);
 
   // show list of selectable files
-  ImColor col(1.f, 0.85f, 0.f);
+  ImVec4 col(1.f, 0.85f, 0.f, 1.f);
   if (file_names_ptr.size() > 0) {
     ImGui::PushStyleColor(ImGuiCol_Text, col);
     ImGui::Text("IN: %s", f_dir.str());
@@ -546,13 +547,15 @@ int load_ui(lua_State *L) {
       sctrl.num_frames = input_p.size();
       // set array sizes
       get_points(input_p, sctrl._input, sctrl.curr_idx, VectorOut::INPUT);
-			if (file_names[selected_file].contains("canon")) {
-				get_points(groundtr_p, sctrl._ground, sctrl.curr_idx, VectorOut::OUTPUT_C);
-				get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
-			} else {
-				get_points(groundtr_p, sctrl._ground, sctrl.curr_idx, VectorOut::OUTPUT);
-				get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
-			}
+      if (file_names[selected_file].contains("canon")) {
+        get_points(groundtr_p, sctrl._ground, sctrl.curr_idx,
+                   VectorOut::OUTPUT_C);
+        get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
+      } else {
+        get_points(groundtr_p, sctrl._ground, sctrl.curr_idx,
+                   VectorOut::OUTPUT);
+        get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
+      }
     }
 
     // button to create & export data in canonical space
@@ -567,7 +570,7 @@ int load_ui(lua_State *L) {
       for(unsigned i = 0; i < sctrl.num_frames; i++) {
         get_points(input_p, temp_in, i, VectorOut::INPUT);
         get_points(groundtr_p, temp_g, i, VectorOut::OUTPUT);
-        
+
 
         export_canonical_data(temp_in, temp_g, f_dir.str(),
                             file_names_ptr[selected_file],

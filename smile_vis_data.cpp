@@ -1,11 +1,11 @@
 #include "smile_vis_data.h"
-#include <iostream>
 #include "ddFileIO.h"
 #include "ddTerminal.h"
+#include <iostream>
 
-std::vector<double> feedForward(Eigen::VectorXd& inputs,
-                                std::vector<Eigen::MatrixXd>& weights,
-                                std::vector<Eigen::VectorXd>& biases) {
+std::vector<double> feedForward(Eigen::VectorXd &inputs,
+                                std::vector<Eigen::MatrixXd> &weights,
+                                std::vector<Eigen::VectorXd> &biases) {
   // output is class id
   int layers = weights.size();
   // inputs are assumed normalized where appropriate
@@ -36,7 +36,7 @@ std::vector<double> feedForward(Eigen::VectorXd& inputs,
   return output;
 }
 
-Eigen::VectorXd extract_vector(const char* in_file) {
+Eigen::VectorXd extract_vector(const char *in_file) {
   Eigen::VectorXd out_vec;
   ddIO vec_io;
 
@@ -45,7 +45,7 @@ Eigen::VectorXd extract_vector(const char* in_file) {
   if (success) {
     // get vector size
     unsigned long vec_size = 0;
-    const char* line = vec_io.readNextLine();
+    const char *line = vec_io.readNextLine();
     if (line && *line) vec_size = std::strtoul(line, NULL, 10);
 
     printf("    Creating new vector (%lu)...\n", vec_size);
@@ -66,7 +66,7 @@ Eigen::VectorXd extract_vector(const char* in_file) {
   return out_vec;
 }
 
-std::vector<Eigen::VectorXd> extract_vector2(const char* in_file) {
+std::vector<Eigen::VectorXd> extract_vector2(const char *in_file) {
   std::vector<Eigen::VectorXd> out_vec;
   ddIO vec_io;
 
@@ -74,17 +74,17 @@ std::vector<Eigen::VectorXd> extract_vector2(const char* in_file) {
 
   if (success) {
     // get vector size
-    const char* line = vec_io.readNextLine();
+    const char *line = vec_io.readNextLine();
     dd_array<cbuff<64>> indices = StrSpace::tokenize1024<64>(line, ",");
-		const std::string _f = in_file;
-		if (_f.find("canon") != std::string::npos) {
-			indices = StrSpace::tokenize1024<64>(line, " ");
-		} else {
-			line = vec_io.readNextLine(); // skip header line 
-		}
-		const unsigned vec_size = indices.size();
+    const std::string _f = in_file;
+    if (_f.find("canon") != std::string::npos) {
+      indices = StrSpace::tokenize1024<64>(line, " ");
+    } else {
+      line = vec_io.readNextLine();  // skip header line
+    }
+    const unsigned vec_size = indices.size();
 
-    //ddTerminal::f_post("Creating new input vectors(%lu)...", vec_size);
+    // ddTerminal::f_post("Creating new input vectors(%lu)...", vec_size);
     // populate vector
     line = vec_io.readNextLine();
     unsigned idx = 0;
@@ -93,9 +93,9 @@ std::vector<Eigen::VectorXd> extract_vector2(const char* in_file) {
 
       // loop thru columns per row
       unsigned r_idx = 0;
-      const char* curr_row = line;
+      const char *curr_row = line;
       while (*curr_row) {
-        char* nxt_dbl = nullptr;
+        char *nxt_dbl = nullptr;
         // printf("%s\n", curr_row);
         out_vec[idx](r_idx) = std::strtod(curr_row, &nxt_dbl);
         curr_row = nxt_dbl;
@@ -112,7 +112,7 @@ std::vector<Eigen::VectorXd> extract_vector2(const char* in_file) {
   return out_vec;
 }
 
-Eigen::MatrixXd extract_matrix(const char* in_file) {
+Eigen::MatrixXd extract_matrix(const char *in_file) {
   Eigen::MatrixXd out_mat;
   ddIO mat_io;
 
@@ -121,8 +121,8 @@ Eigen::MatrixXd extract_matrix(const char* in_file) {
   if (success) {
     // get matrix size
     unsigned long mat_size[2] = {0, 0};
-    const char* line = mat_io.readNextLine();
-    char* nxt_num = nullptr;
+    const char *line = mat_io.readNextLine();
+    char *nxt_num = nullptr;
     if (line && *line) {
       // doesn't work if line doesn't have 2 number white-space separated
       mat_size[0] = std::strtoul(line, &nxt_num, 10);
@@ -138,9 +138,9 @@ Eigen::MatrixXd extract_matrix(const char* in_file) {
     while (line && *line) {
       // loop thru columns per row
       unsigned c_idx = 0;
-      const char* curr_row = line;
+      const char *curr_row = line;
       while (*curr_row) {
-        char* nxt_dbl = nullptr;
+        char *nxt_dbl = nullptr;
         // printf("%s\n", curr_row);
         out_mat(r_idx, c_idx) = std::strtod(curr_row, &nxt_dbl);
         curr_row = nxt_dbl;
@@ -157,8 +157,8 @@ Eigen::MatrixXd extract_matrix(const char* in_file) {
   return out_mat;
 }
 
-void get_points(std::vector<Eigen::VectorXd>& v_bin,
-                dd_array<glm::vec3>& out_bin, const unsigned idx,
+void get_points(std::vector<Eigen::VectorXd> &v_bin,
+                dd_array<glm::vec3> &out_bin, const unsigned idx,
                 const VectorOut type) {
   if (type == VectorOut::INPUT) {
     // use all values
@@ -182,16 +182,16 @@ void get_points(std::vector<Eigen::VectorXd>& v_bin,
     // Iris (L) x,Iris (L) y,
   } else {
     // skip 1st 4 values (remove delta values)
-		unsigned c_idx = 2;
-		if (type == VectorOut::OUTPUT_C) {
-			c_idx = 0;
-		}
-		if ((int)out_bin.size() != ((v_bin[idx].size()) / 2)) {
-			out_bin.resize((v_bin[idx].size() ) / 2);
-		}
+    unsigned c_idx = 2;
+    if (type == VectorOut::OUTPUT_C) {
+      c_idx = 0;
+    }
+    if ((int)out_bin.size() != ((v_bin[idx].size()) / 2)) {
+      out_bin.resize((v_bin[idx].size()) / 2);
+    }
 
     while ((c_idx) < out_bin.size()) {
-      out_bin[c_idx ] =
+      out_bin[c_idx] =
           glm::vec3(v_bin[idx](c_idx * 2), v_bin[idx](c_idx * 2 + 1), 0.f);
       c_idx++;
     }
@@ -214,9 +214,9 @@ void get_points(std::vector<Eigen::VectorXd>& v_bin,
   }
 }
 
-void get_points(Eigen::VectorXd& input, std::vector<Eigen::MatrixXd>& weights,
-                std::vector<Eigen::VectorXd>& biases,
-                dd_array<glm::vec3>& output) {
+void get_points(Eigen::VectorXd &input, std::vector<Eigen::MatrixXd> &weights,
+                std::vector<Eigen::VectorXd> &biases,
+                dd_array<glm::vec3> &output) {
   std::vector<double> out_d = feedForward(input, weights, biases);
 
   // skip 1st 4 values
@@ -225,8 +225,8 @@ void get_points(Eigen::VectorXd& input, std::vector<Eigen::MatrixXd>& weights,
   }
   unsigned c_idx = 0;
 
-  while ((c_idx ) < output.size()) {
-    output[c_idx ] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
+  while ((c_idx) < output.size()) {
+    output[c_idx] = glm::vec3(out_d[c_idx * 2], out_d[c_idx * 2 + 1], 0.f);
     c_idx++;
   }
 
@@ -247,9 +247,9 @@ void get_points(Eigen::VectorXd& input, std::vector<Eigen::MatrixXd>& weights,
   // Malar eminence (R) x,Malar eminence (R) y
 }
 
-void export_canonical_data(dd_array<glm::vec3>& input,
-                           dd_array<glm::vec3>& ground, const char* dir,
-                           const char* gdir, const char* file_id,
+void export_canonical_data(dd_array<glm::vec3> &input,
+                           dd_array<glm::vec3> &ground, const char *dir,
+                           const char *gdir, const char *file_id,
                            const glm::vec2 canonical_iris_pos,
                            const float canonical_iris_dist) {
   // create new file
@@ -258,18 +258,18 @@ void export_canonical_data(dd_array<glm::vec3>& input,
   cbuff<512> out_f_name, out_fg_name;
   out_f_name.format("%s/%s_canon.csv", dir, f_id.c_str());
   out_fg_name.format("%s/%s_canon.csv", gdir, f_id.c_str());
-  //ddTerminal::f_post("Creating: %s", out_f_name.str());
+  // ddTerminal::f_post("Creating: %s", out_f_name.str());
 
   // get translation offset (Iris (M) x, Iris (M) y)
   const unsigned iris_m_idx = 2;
   const unsigned iris_l_idx = 3;
-	//glm::vec2 delta_pos = glm::vec2(-input[iris_l_idx]);
+  // glm::vec2 delta_pos = glm::vec2(-input[iris_l_idx]);
 
-	// palpebral fissure delta and center
-	const unsigned pf_r_l = 5;
-	const unsigned pf_l_l = 7;
+  // palpebral fissure delta and center
+  const unsigned pf_r_l = 5;
+  const unsigned pf_l_l = 7;
   glm::vec2 delta_pos = glm::vec2(-ground[pf_r_l]);
-	ddTerminal::f_post("PF R L: %.3f", -delta_pos.y);
+  ddTerminal::f_post("PF R L: %.3f", -delta_pos.y);
 
   // apply delta translation to all points
   dd_array<glm::vec2> input_n(input.size());
@@ -317,11 +317,11 @@ void export_canonical_data(dd_array<glm::vec3>& input,
     // ddTerminal::f_post("#%u : %.3f, %.3f", vec.i, vec.ptr->x, vec.ptr->y);
     input_n[vec.i] = input_n[vec.i] + canonical_iris_pos;
   }
-	DD_FOREACH(glm::vec3, vec, ground) {
-		// ddTerminal::f_post("----> %.3f, %.3f", input_n[vec.i].x,
-		// input_n[vec.i].y);
-		ground_n[vec.i] = ground_n[vec.i] + canonical_iris_pos;
-	}
+  DD_FOREACH(glm::vec3, vec, ground) {
+    // ddTerminal::f_post("----> %.3f, %.3f", input_n[vec.i].x,
+    // input_n[vec.i].y);
+    ground_n[vec.i] = ground_n[vec.i] + canonical_iris_pos;
+  }
 
   // write out input and ground file
   ddIO i_out, g_out;
@@ -348,7 +348,7 @@ void export_canonical_data(dd_array<glm::vec3>& input,
   g_out.writeLine(out_str.c_str());
 }
 
-void export_canonical(const char* input_dir, const char* ground_dir,
+void export_canonical(const char *input_dir, const char *ground_dir,
                       const glm::vec2 canonical_iris_pos,
                       const float canonical_iris_dist) {
   // export input files
@@ -362,7 +362,7 @@ void export_canonical(const char* input_dir, const char* ground_dir,
     ddTerminal::f_post("Opening in dir: %s..", input_dir);
     ddTerminal::f_post("Opening ground dir: %s..", ground_dir);
     DD_FOREACH(cbuff<512>, file, i_files) {
-      const char* g_file = g_files[file.i].str();
+      const char *g_file = g_files[file.i].str();
       // get name of file
       const std::string temp = file.ptr->str();
       const size_t idx = temp.find_last_of("\\/");
@@ -375,16 +375,16 @@ void export_canonical(const char* input_dir, const char* ground_dir,
         std::vector<Eigen::VectorXd> i_vec = extract_vector2(file.ptr->str());
         std::vector<Eigen::VectorXd> g_vec = extract_vector2(g_file);
 
-				// loop thru lines fo each and write to output file
+        // loop thru lines fo each and write to output file
         for (size_t j = 0; j < i_vec.size(); j++) {
-					dd_array<glm::vec3> i_p, g_p;
-					get_points(i_vec, i_p, j, VectorOut::INPUT);
-					get_points(g_vec, g_p, j, VectorOut::OUTPUT);
+          dd_array<glm::vec3> i_p, g_p;
+          get_points(i_vec, i_p, j, VectorOut::INPUT);
+          get_points(g_vec, g_p, j, VectorOut::OUTPUT);
 
-					export_canonical_data(i_p, g_p, input_dir, ground_dir, f_name.c_str(),
-																canonical_iris_pos, canonical_iris_dist);
+          export_canonical_data(i_p, g_p, input_dir, ground_dir, f_name.c_str(),
+                                canonical_iris_pos, canonical_iris_dist);
         }
-				ddTerminal::post("---> Done.");
+        ddTerminal::post("---> Done.");
       }
     }
   }

@@ -24,39 +24,6 @@ do
 
   -- update function
   function data_manager:update( event, args, num_args )
-    -- calculate offset 
-    if event == "calc_offset" then
-      if self.data.num_frames <= 0 then
-        ddLib.print("No smile file loaded")
-      else
-        p_in = { SController.get_input_data() } -- input
-        p_gt = { SController.get_ground_data() } -- ground truth
-        p_calc = { SController.get_calc_data() } -- output
-
-        -- get translation offset
-        t_vec = p_in[3]
-        t_vec = { -t_vec.x, -t_vec.y }
-        ddLib.print("Translation vector(", #p_calc, "): ", t_vec[1], ",", t_vec[2])
-        
-        -- apply delta translation to all points
-        for i=1,#p_in do
-          ddLib.print("  #", i, " = ", p_in[i].x, ", ", p_in[i].y)
-          p_in[i].x = p_in[i].x + t_vec[1]
-          p_in[i].y = p_in[i].y + t_vec[2]
-          ddLib.print("  --->", p_in[i].x, ", ", p_in[i].y)
-        end
-
-        -- get rotation offset b/t lateral & medial iris
-        -- math.atan2(l_iris_y, l_iris_x)
-
-        -- apply negative rotation to all points (at the current pos)
-
-        -- scale points so that iris distance is set to a canonical distance
-
-        -- apply translation to all points to move iris to canonical position
-      end
-    end
-
     -- get data (if something is opened)
     if self.data.num_frames > 0 then
       -- animate

@@ -59,10 +59,10 @@ do
 
         -- add a bit of an offset
         self.data.ortho = {
-          bounds_min[1] - 0.2, 
-          bounds_max[1] + 0.2, 
-          bounds_max[2] + 0.2, 
-          bounds_min[2] - 0.2
+          bounds_min[1] - 5.0, 
+          bounds_max[1] + 2.0, 
+          bounds_max[2] + 2.0, 
+          bounds_min[2] - 2.0
         }
         self.data.tile = 0.05
         ddLib.print("Bounds: ", bounds_min[1], ", ", bounds_min[2], ", ", bounds_max[1], ", ", bounds_max[2])

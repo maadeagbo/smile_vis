@@ -1,9 +1,11 @@
 #include "Container.h"
 #include "Eigen/Core"
 #include "ddIncludes.h"
+#include "StringLib.h"
 #include <vector>
+#include <map>
 
-enum class VectorOut { INPUT, OUTPUT, CALC, OUTPUT_C };
+enum class VectorOut : unsigned { INPUT, OUTPUT, CALC, INPUT_C, OUTPUT_C };
 
 /** \brief Pipe input thru neural net matrices */
 std::vector<double> feedForward(Eigen::VectorXd &inputs,
@@ -14,7 +16,8 @@ std::vector<double> feedForward(Eigen::VectorXd &inputs,
 Eigen::VectorXd extract_vector(const char *in_file);
 
 /** \brief Get vector of 1D eigen vector from input file */
-std::vector<Eigen::VectorXd> extract_vector2(const char *in_file);
+std::vector<Eigen::VectorXd> extract_vector2(const char *in_file,
+                                             const VectorOut type);
 
 /** \brief Get 2D eigen matrix from input file */
 Eigen::MatrixXd extract_matrix(const char *in_file);
@@ -34,9 +37,12 @@ void export_canonical_data(dd_array<glm::vec3> &input,
                            dd_array<glm::vec3> &ground, const char *dir,
                            const char *gdir, const char *file_id,
                            const glm::vec2 canonical_iris_pos,
-                           const float canonical_iris_dist);
+                           const float canonical_iris_dist, const bool append);
 
 /** \brief Export data into calibrated space by folder */
 void export_canonical(const char *input_dir, const char *ground_dir,
                       const glm::vec2 canonical_iris_pos,
                       const float canonical_iris_dist);
+
+std::map<cbuff<64>, unsigned> &get_input_keys();
+std::map<cbuff<64>, unsigned> &get_output_keys();

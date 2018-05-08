@@ -39,8 +39,11 @@ int selected_file = 0;
 cbuff<512> f_dir;
 cbuff<512> gd_dir;
 dd_array<cbuff<512>> files;
+dd_array<cbuff<512>> files_canon;
 dd_array<cbuff<64>> file_names;
+dd_array<cbuff<64>> file_names_canon;
 dd_array<const char *> file_names_ptr;
+dd_array<const char *> file_names_ptr_canon;
 
 // buffers for drawing primitives
 glm::vec3 point_buff[6];
@@ -63,12 +66,18 @@ std::vector<Eigen::VectorXd> groundtr_p;
 // weights and biases
 std::vector<Eigen::MatrixXd> weights;
 std::vector<Eigen::VectorXd> biases;
+std::vector<Eigen::MatrixXd> weights_canon;
+std::vector<Eigen::VectorXd> biases_canon;
 
 // int buffer for pulling values from lua
 dd_array<int64_t> i64_bin = dd_array<int64_t>(4);
 
 // asynchronous function for exporting input
 std::future<void> async_canonical;
+
+// tab bar controls
+const char *tab_name[2] = {"Normal", "Canonical"};
+bool tab_flag[2] = {true, true};
 }  // namespace
 
 //******************************************************************************
@@ -362,7 +371,12 @@ void draw_frame() {
     // predicted
     if (sctrl._predicted.size() > 0) {
       // update calculated points
-      get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
+      if (tab_flag[0]) {  // normal
+        get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
+      } else {	// canonical
+        get_points(input_p[sctrl.curr_idx], weights_canon, biases_canon,
+                   sctrl._predicted);
+      }
 
       point_sh.set_uniform((int)RE_Point::color_v4,
                            glm::vec4(1.f, 0.f, 0.f, 1.f));
@@ -530,56 +544,82 @@ int load_ui(lua_State *L) {
     ImGui::Text("GT: %s", gd_dir.str());
     ImGui::PopStyleColor();
 
-    ImGui::ListBox("<-- Select data", &selected_file, &file_names_ptr[0],
-                   (int)file_names_ptr.size(), 10);
+    ImGui::BeginTabBar("Smile data", ImGuiTabBarFlags_SizingPolicyDefault_);
 
-    // button to load data
-    if (ImGui::Button("Load selected")) {
-      // load input
-      input_p = extract_vector2(files[selected_file].str());
-      // load ground truth
-      std::string temp = gd_dir.str() + std::string("/") +
-                         std::string(file_names_ptr[selected_file]);
-      groundtr_p = extract_vector2(temp.c_str());
+    for (unsigned i = 0; i < 2; i++) {
+      const bool selected = ImGui::TabItem(tab_name[i]);
+      tab_flag[i] = selected;
 
-      // set frame count
-      sctrl.curr_idx = 0;
-      sctrl.num_frames = input_p.size();
-      // set array sizes
-      get_points(input_p, sctrl._input, sctrl.curr_idx, VectorOut::INPUT);
-      if (file_names[selected_file].contains("canon")) {
-        get_points(groundtr_p, sctrl._ground, sctrl.curr_idx,
-                   VectorOut::OUTPUT_C);
-        get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
-      } else {
-        get_points(groundtr_p, sctrl._ground, sctrl.curr_idx,
-                   VectorOut::OUTPUT);
-        get_points(input_p[sctrl.curr_idx], weights, biases, sctrl._predicted);
+      if (!selected) continue;
+
+      switch (i) {
+        case 0:  // normal
+          ImGui::ListBox("<-- Select data", &selected_file, &file_names_ptr[0],
+                         (int)file_names_ptr.size(), 10);
+
+          // button to load data
+          if (ImGui::Button("Load selected")) {
+            // load input
+            input_p =
+                extract_vector2(files[selected_file].str(), VectorOut::INPUT);
+            // load ground truth
+            std::string temp = gd_dir.str() + std::string("/") +
+                               std::string(file_names_ptr[selected_file]);
+            groundtr_p = extract_vector2(temp.c_str(), VectorOut::OUTPUT);
+
+            // set frame count
+            sctrl.curr_idx = 0;
+            sctrl.num_frames = input_p.size();
+            // set array sizes
+            get_points(input_p, sctrl._input, sctrl.curr_idx, VectorOut::INPUT);
+            get_points(groundtr_p, sctrl._ground, sctrl.curr_idx,
+                       VectorOut::OUTPUT);
+            get_points(input_p[sctrl.curr_idx], weights, biases,
+                       sctrl._predicted);
+          }
+
+          // button to create & export data in canonical space
+          ImGui::SameLine();
+          if (ImGui::Button("Export canonical")) {
+            const glm::vec2 canon_point(-0.5f, 0.f);
+            const float canon_space = 1.0f;
+            async_canonical =
+                std::async(std::launch::async, export_canonical, f_dir.str(),
+                           gd_dir.str(), canon_point, canon_space);
+          }
+          break;
+        case 1:  // canonical
+          ImGui::ListBox("<-- Select data", &selected_file,
+                         &file_names_ptr_canon[0],
+                         (int)file_names_ptr_canon.size(), 10);
+          // button to load data
+          if (ImGui::Button("Load selected")) {
+            // load input
+            input_p = extract_vector2(files_canon[selected_file].str(),
+                                      VectorOut::INPUT_C);
+            // load ground truth
+            std::string temp = gd_dir.str() + std::string("/") +
+                               std::string(file_names_ptr_canon[selected_file]);
+            groundtr_p = extract_vector2(temp.c_str(), VectorOut::OUTPUT_C);
+
+            // set frame count
+            sctrl.curr_idx = 0;
+            sctrl.num_frames = input_p.size();
+            // set array sizes
+            get_points(input_p, sctrl._input, sctrl.curr_idx,
+                       VectorOut::INPUT_C);
+            get_points(groundtr_p, sctrl._ground, sctrl.curr_idx,
+                       VectorOut::OUTPUT_C);
+            get_points(input_p[sctrl.curr_idx], weights_canon, biases_canon,
+                       sctrl._predicted);
+          }
+          break;
+        default:
+          break;
       }
     }
 
-    // button to create & export data in canonical space
-    ImGui::SameLine();
-    if (ImGui::Button("Export canonical")) {
-      const glm::vec2 canon_point(-0.5f, 0.f);
-      const float canon_space = 1.0f;
-
-      // loop thru
-      /*dd_array<glm::vec3> temp_in(sctrl._input.size());
-      dd_array<glm::vec3> temp_g(sctrl._ground.size());
-      for(unsigned i = 0; i < sctrl.num_frames; i++) {
-        get_points(input_p, temp_in, i, VectorOut::INPUT);
-        get_points(groundtr_p, temp_g, i, VectorOut::OUTPUT);
-
-
-        export_canonical_data(temp_in, temp_g, f_dir.str(),
-                            file_names_ptr[selected_file],
-                            canon_point, canon_space);
-      }*/
-      async_canonical =
-          std::async(std::launch::async, export_canonical, f_dir.str(),
-                     gd_dir.str(), canon_point, canon_space);
-    }
+    ImGui::EndTabBar();  // end of tab bar interface
   } else {
     ImGui::PushStyleColor(ImGuiCol_Text, col);
     ImGui::Text("No Folders loaded/Folder not found");
@@ -587,7 +627,7 @@ int load_ui(lua_State *L) {
   }
   ImGui::Separator();
 
-  if (sctrl._input.size() > 0) {
+  if (sctrl._predicted.size() > 0) {
     // if (false) {
     // difference
     unsigned idx = 0;
@@ -689,10 +729,16 @@ void load_files(const char *directory, const bool ground_truth) {
 
     // check if file contains _s_out.csv or _v_out.csv
     dd_array<unsigned> valid_files(unfiltered.size());
+    dd_array<unsigned> valid_files_canon(unfiltered.size());
     unsigned files_found = 0;
+    unsigned files_found_canon = 0;
     DD_FOREACH(cbuff<512>, file, unfiltered) {
-      // capture index of matching files
-      if (file.ptr->contains("_s_") || file.ptr->contains("_v_")) {
+      if (file.ptr->contains("canon")) {
+        // capture index of canonical space files
+        valid_files_canon[files_found_canon] = file.i;
+        files_found_canon++;
+      } else if (file.ptr->contains("_s_") || file.ptr->contains("_v_")) {
+        // capture index of matching files
         valid_files[files_found] = file.i;
         files_found++;
       }
@@ -702,12 +748,25 @@ void load_files(const char *directory, const bool ground_truth) {
     files.resize(files_found);
     file_names.resize(files_found);
     file_names_ptr.resize(files_found);
+
     for (unsigned i = 0; i < files_found; i++) {
       files[i] = unfiltered[valid_files[i]];
 
       std::string _s = unfiltered[valid_files[i]].str();
       file_names[i] = _s.substr(_s.find_last_of("\\/") + 1).c_str();
       file_names_ptr[i] = file_names[i].str();
+    }
+    // canonical
+    files_canon.resize(files_found_canon);
+    file_names_canon.resize(files_found_canon);
+    file_names_ptr_canon.resize(files_found_canon);
+
+    for (unsigned i = 0; i < files_found_canon; i++) {
+      files_canon[i] = unfiltered[valid_files_canon[i]];
+
+      std::string _s = unfiltered[valid_files_canon[i]].str();
+      file_names_canon[i] = _s.substr(_s.find_last_of("\\/") + 1).c_str();
+      file_names_ptr_canon[i] = file_names_canon[i].str();
     }
   }
 }
@@ -721,7 +780,10 @@ void load_weights(const char *directory) {
   // check if file contains .csv
   DD_FOREACH(cbuff<512>, file, unfiltered) {
     // load up matching files
-    if (file.ptr->contains(".csv")) {
+    if (file.ptr->contains(".csv") && file.ptr->contains("canon")) {
+      // canonical
+      weights_canon.push_back(extract_matrix(file.ptr->str()));
+    } else if (file.ptr->contains(".csv")) {
       weights.push_back(extract_matrix(file.ptr->str()));
     }
   }
@@ -736,7 +798,10 @@ void load_biases(const char *directory) {
   // check if file contains .csv
   DD_FOREACH(cbuff<512>, file, unfiltered) {
     // load up matching files
-    if (file.ptr->contains(".csv")) {
+    if (file.ptr->contains(".csv") && file.ptr->contains("canon")) {
+      // canonical
+      biases_canon.push_back(extract_vector(file.ptr->str()));
+    } else if (file.ptr->contains(".csv")) {
       biases.push_back(extract_vector(file.ptr->str()));
     }
   }

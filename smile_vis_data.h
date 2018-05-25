@@ -44,5 +44,5 @@ void export_canonical(const char *input_dir, const char *ground_dir,
                       const glm::vec2 canonical_iris_pos,
                       const float canonical_iris_dist);
 
-std::map<cbuff<64>, unsigned> &get_input_keys();
-std::map<cbuff<64>, unsigned> &get_output_keys();
+std::map<string64, unsigned> &get_input_keys();
+std::map<string64, unsigned> &get_output_keys();

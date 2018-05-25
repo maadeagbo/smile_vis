@@ -5,9 +5,9 @@
 
 namespace {
 // log keys for easy indexing
-std::map<cbuff<64>, unsigned> input_keys;
+std::map<string64, unsigned> input_keys;
 std::map<unsigned, float> input_time;
-std::map<cbuff<64>, unsigned> output_keys;
+std::map<string64, unsigned> output_keys;
 std::map<unsigned, float> output_time;
 }  // namespace
 
@@ -84,15 +84,14 @@ std::vector<Eigen::VectorXd> extract_vector2(const char *in_file,
   if (success) {
     // get vector size
     const char *line = vec_io.readNextLine();
-    dd_array<cbuff<64>> indices;
-    const std::string _f = in_file;
+    dd_array<string64> indices;
 
     switch (type) {
       case VectorOut::INPUT:
         // get input keys
-        indices = StrSpace::tokenize1024<64>(line, ",");
+        indices = StrLib::tokenize2<64>(line, ",");
         if (input_keys.size() == 0) {
-          DD_FOREACH(cbuff<64>, _key, indices) {
+          DD_FOREACH(string64, _key, indices) {
             // set offset if time column is present (must be 1st column)
             if (_key.ptr->contains("time")) {
 							input_time[_key.i] = 0.f;
@@ -105,9 +104,9 @@ std::vector<Eigen::VectorXd> extract_vector2(const char *in_file,
         break;
       case VectorOut::OUTPUT:
         // get output keys
-        indices = StrSpace::tokenize1024<64>(line, ",");
+        indices = StrLib::tokenize2<64>(line, ",");
         if (output_keys.size() == 0) {
-          DD_FOREACH(cbuff<64>, _key, indices) {
+          DD_FOREACH(string64, _key, indices) {
             if (_key.ptr->contains("time")) {
 							output_time[_key.i] = 0.f;
             }
@@ -118,10 +117,10 @@ std::vector<Eigen::VectorXd> extract_vector2(const char *in_file,
         line = vec_io.readNextLine();
         break;
       case VectorOut::INPUT_C:
-        indices = StrSpace::tokenize1024<64>(line, " ");
+        indices = StrLib::tokenize2<64>(line, " ");
         break;
       case VectorOut::OUTPUT_C:
-        indices = StrSpace::tokenize1024<64>(line, " ");
+        indices = StrLib::tokenize2<64>(line, " ");
         break;
       default:
         break;
@@ -287,9 +286,9 @@ void get_points(Eigen::VectorXd &input, std::vector<Eigen::MatrixXd> &weights,
   // Malar eminence (R) x,Malar eminence (R) y
 }
 
-std::map<cbuff<64>, unsigned> &get_input_keys() { return input_keys; }
+std::map<string64, unsigned> &get_input_keys() { return input_keys; }
 
-std::map<cbuff<64>, unsigned> &get_output_keys() { return output_keys; }
+std::map<string64, unsigned> &get_output_keys() { return output_keys; }
 
 void export_canonical_data(dd_array<glm::vec3> &input,
                            dd_array<glm::vec3> &ground, const char *dir,
@@ -297,15 +296,15 @@ void export_canonical_data(dd_array<glm::vec3> &input,
                            const glm::vec2 canonical_iris_pos,
                            const float canonical_iris_dist, const bool append) {
   // create new file
-  std::string f_id = file_id;
-  f_id = f_id.substr(0, 7);
-  cbuff<512> out_f_name, out_fg_name;
-  out_f_name.format("%s/%s_canon.csv", dir, f_id.c_str());
-  out_fg_name.format("%s/%s_canon.csv", gdir, f_id.c_str());
+	string512 f_id = file_id;
+  f_id = f_id.trim(0, 7);
+  string512 out_f_name, out_fg_name;
+  out_f_name.format("%s/%s_canon.csv", dir, f_id.str());
+  out_fg_name.format("%s/%s_canon.csv", gdir, f_id.str());
   // ddTerminal::f_post("Creating: %s", out_f_name.str());
 
   // get translation offset (Iris (M) x, Iris (M) y)
-  cbuff<64> map_idx = "Iris (M) x";
+  string64 map_idx = "Iris (M) x";
   const unsigned iris_m_idx = input_keys[map_idx]/2;
 	map_idx = "Iris (L) x";
   const unsigned iris_l_idx = input_keys[map_idx]/2;
@@ -379,16 +378,16 @@ void export_canonical_data(dd_array<glm::vec3> &input,
     i_out.open(out_f_name.str(), ddIOflag::WRITE);
   }
 
-  std::string out_str;
-  std::string _sp(" ");
+  string512 out_str;
+  string8 x_val, y_val;
   DD_FOREACH(glm::vec2, vec, input_n) {
-    out_str +=
-        std::to_string(vec.ptr->x) + _sp + std::to_string(vec.ptr->y) + _sp;
+		x_val.format(" %.5f", vec.ptr->x);
+		y_val.format(" %.5f", vec.ptr->y);
+		out_str = out_str + x_val + y_val;
   }
-  out_str.pop_back();
-  out_str += "\n";
+  out_str.format("%s\n", out_str.str(1));
   // ddTerminal::post(out_str.c_str());
-  i_out.writeLine(out_str.c_str());
+  i_out.writeLine(out_str.str());
 
   if (append) {
     g_out.open(out_fg_name.str(), ddIOflag::APPEND);
@@ -398,12 +397,12 @@ void export_canonical_data(dd_array<glm::vec3> &input,
 
   out_str = "";
   DD_FOREACH(glm::vec2, vec, ground_n) {
-    out_str +=
-        std::to_string(vec.ptr->x) + _sp + std::to_string(vec.ptr->y) + _sp;
+		x_val.format(" %.5f", vec.ptr->x);
+		y_val.format(" %.5f", vec.ptr->y);
+		out_str = out_str + x_val + y_val;
   }
-  out_str.pop_back();
-  out_str += "\n";
-  g_out.writeLine(out_str.c_str());
+	out_str.format("%s\n", out_str.str(1));
+  g_out.writeLine(out_str.str());
 }
 
 void export_canonical(const char *input_dir, const char *ground_dir,
@@ -415,19 +414,19 @@ void export_canonical(const char *input_dir, const char *ground_dir,
   success |= io_ground.open(ground_dir, ddIOflag::DIRECTORY);
   if (success) {
     // for each file:
-    dd_array<cbuff<512>> i_files = io_input.get_directory_files();
-    dd_array<cbuff<512>> g_files = io_ground.get_directory_files();
+    dd_array<string512> i_files = io_input.get_directory_files();
+    dd_array<string512> g_files = io_ground.get_directory_files();
     ddTerminal::f_post("Opening in dir: %s..", input_dir);
     ddTerminal::f_post("Opening ground dir: %s..", ground_dir);
-    DD_FOREACH(cbuff<512>, file, i_files) {
+    DD_FOREACH(string512, file, i_files) {
       const char *g_file = g_files[file.i].str();
       // get name of file
-      const std::string temp = file.ptr->str();
-      const size_t idx = temp.find_last_of("\\/");
-      const std::string f_name = temp.substr(idx + 1);
+			dd_array<unsigned> token_idx = StrLib::tokenize(file.ptr->str(), "\\/");
+      const unsigned idx = token_idx[token_idx.size() - 1];
+      const string32 f_name = file.ptr->str(idx + 1);
 
-      if (f_name.find("canon") == std::string::npos) {
-        ddTerminal::f_post("  Exporting: %s", f_name.c_str());
+      if (!f_name.contains("canon")) {
+        ddTerminal::f_post("  Exporting: %s", f_name.str());
 
         // extract contents of each file and convert to glm vectors
         std::vector<Eigen::VectorXd> i_vec =
@@ -442,7 +441,7 @@ void export_canonical(const char *input_dir, const char *ground_dir,
           get_points(g_vec, g_p, j, VectorOut::OUTPUT);
 
           const bool append = (j == 0) ? false : true;
-          export_canonical_data(i_p, g_p, input_dir, ground_dir, f_name.c_str(),
+          export_canonical_data(i_p, g_p, input_dir, ground_dir, f_name.str(),
                                 canonical_iris_pos, canonical_iris_dist,
                                 append);
         }

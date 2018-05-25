@@ -59,7 +59,7 @@ int log_data_weights_biases(lua_State *L) {
   load_weights(directory1);
   load_biases(directory2);
 	// canonical versions
-	cbuff<512> dir;
+	string512 dir;
 	dir.format("%s_canon", directory1);
 	load_weights(dir.str());
 	dir.format("%s_canon", directory2);

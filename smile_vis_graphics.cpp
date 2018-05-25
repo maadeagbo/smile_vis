@@ -36,12 +36,12 @@ dd_array<glm::vec2> l_texcoords = dd_array<glm::vec2>(MAX_POINTS);
 
 // structures for tracking useable files
 int selected_file = 0;
-cbuff<512> f_dir;
-cbuff<512> gd_dir;
-dd_array<cbuff<512>> files;
-dd_array<cbuff<512>> files_canon;
-dd_array<cbuff<64>> file_names;
-dd_array<cbuff<64>> file_names_canon;
+string512 f_dir;
+string512 gd_dir;
+dd_array<string512> files;
+dd_array<string512> files_canon;
+dd_array<string64> file_names;
+dd_array<string64> file_names_canon;
 dd_array<const char *> file_names_ptr;
 dd_array<const char *> file_names_ptr_canon;
 
@@ -86,10 +86,10 @@ bool tab_flag[2] = {true, true};
 #define SCTR_META_NAME "LuaClass.Controller"
 #define check_sctrl(L) (SController **)luaL_checkudata(L, 1, SCTR_META_NAME)
 
-const size_t idx_var = getCharHash("idx");
-const size_t frames_var = getCharHash("num_frames");
-const size_t tile_var = getCharHash("tile");
-const size_t ortho_var = getCharHash("ortho");
+const size_t idx_var = StrLib::get_char_hash("idx");
+const size_t frames_var = StrLib::get_char_hash("num_frames");
+const size_t tile_var = StrLib::get_char_hash("tile");
+const size_t ortho_var = StrLib::get_char_hash("ortho");
 
 static int set_val(lua_State *L) {
   SController *ctrl = *check_sctrl(L);
@@ -98,7 +98,7 @@ static int set_val(lua_State *L) {
   const int args = (int)lua_gettop(L);
   if (args == 3) {
     // arg 2 = name of variable
-    cbuff<32> arg_name = (const char *)luaL_checkstring(L, 2);
+    string32 arg_name = (const char *)luaL_checkstring(L, 2);
 
     if (arg_name.gethash() == idx_var) {
       // set current frame
@@ -119,7 +119,7 @@ static int set_val(lua_State *L) {
 
 static int get_val(lua_State *L) {
   SController *ctrl = *check_sctrl(L);
-  cbuff<32> arg_name = (const char *)luaL_checkstring(L, 2);
+  string32 arg_name = (const char *)luaL_checkstring(L, 2);
 
   if (arg_name.gethash() == idx_var) {
     lua_pushinteger(L, ctrl->curr_idx);
@@ -137,13 +137,11 @@ static int get_val(lua_State *L) {
 
 static int to_string(lua_State *L) {
   SController *ctrl = *check_sctrl(L);
-  std::string buff;
 
-  cbuff<128> out;
+  string32 out;
   out.format("\n idx: %d, frames: %d", ctrl->curr_idx, ctrl->num_frames);
-  buff += out.str();
 
-  lua_pushstring(L, buff.c_str());
+  lua_pushstring(L, out.str());
   return 1;
 }
 
@@ -247,7 +245,7 @@ int init_gpu_structures(lua_State *L) {
   // set_imgui_style();
 
   // shader init
-  cbuff<256> fname;
+  string256 fname;
   linedot_sh.init();
   fname.format("%s/smile_vis/%s", PROJECT_DIR, "LineDot_V.vert");
   linedot_sh.create_vert_shader(fname.str());
@@ -563,9 +561,8 @@ int load_ui(lua_State *L) {
             input_p =
                 extract_vector2(files[selected_file].str(), VectorOut::INPUT);
             // load ground truth
-            std::string temp = gd_dir.str() + std::string("/") +
-                               std::string(file_names_ptr[selected_file]);
-            groundtr_p = extract_vector2(temp.c_str(), VectorOut::OUTPUT);
+						string512 ground_file = gd_dir + "/" + file_names_ptr[selected_file];
+            groundtr_p = extract_vector2(ground_file.str(), VectorOut::OUTPUT);
 
             // set frame count
             sctrl.curr_idx = 0;
@@ -598,9 +595,8 @@ int load_ui(lua_State *L) {
             input_p = extract_vector2(files_canon[selected_file].str(),
                                       VectorOut::INPUT_C);
             // load ground truth
-            std::string temp = gd_dir.str() + std::string("/") +
-                               std::string(file_names_ptr_canon[selected_file]);
-            groundtr_p = extract_vector2(temp.c_str(), VectorOut::OUTPUT_C);
+						string512 ground_file = gd_dir + "/" + file_names_ptr_canon[selected_file];
+            groundtr_p = extract_vector2(ground_file.str(), VectorOut::OUTPUT_C);
 
             // set frame count
             sctrl.curr_idx = 0;
@@ -725,14 +721,14 @@ void load_files(const char *directory, const bool ground_truth) {
     f_dir = directory;
     ddIO folder_handle;
     folder_handle.open(directory, ddIOflag::DIRECTORY);
-    dd_array<cbuff<512>> unfiltered = folder_handle.get_directory_files();
+    dd_array<string512> unfiltered = folder_handle.get_directory_files();
 
     // check if file contains _s_out.csv or _v_out.csv
     dd_array<unsigned> valid_files(unfiltered.size());
     dd_array<unsigned> valid_files_canon(unfiltered.size());
     unsigned files_found = 0;
     unsigned files_found_canon = 0;
-    DD_FOREACH(cbuff<512>, file, unfiltered) {
+    DD_FOREACH(string512, file, unfiltered) {
       if (file.ptr->contains("canon")) {
         // capture index of canonical space files
         valid_files_canon[files_found_canon] = file.i;
@@ -752,8 +748,9 @@ void load_files(const char *directory, const bool ground_truth) {
     for (unsigned i = 0; i < files_found; i++) {
       files[i] = unfiltered[valid_files[i]];
 
-      std::string _s = unfiltered[valid_files[i]].str();
-      file_names[i] = _s.substr(_s.find_last_of("\\/") + 1).c_str();
+			string512 _file = unfiltered[valid_files[i]];
+			dd_array<unsigned> token_idx = StrLib::tokenize(_file.str(), "\\/");
+      file_names[i] = _file.str(token_idx[token_idx.size() - 1] + 1);
       file_names_ptr[i] = file_names[i].str();
     }
     // canonical
@@ -764,8 +761,9 @@ void load_files(const char *directory, const bool ground_truth) {
     for (unsigned i = 0; i < files_found_canon; i++) {
       files_canon[i] = unfiltered[valid_files_canon[i]];
 
-      std::string _s = unfiltered[valid_files_canon[i]].str();
-      file_names_canon[i] = _s.substr(_s.find_last_of("\\/") + 1).c_str();
+			string512 _file = unfiltered[valid_files_canon[i]].str();
+			dd_array<unsigned> token_idx = StrLib::tokenize(_file.str(), "\\/");
+      file_names_canon[i] = _file.str(token_idx[token_idx.size() - 1] + 1);
       file_names_ptr_canon[i] = file_names_canon[i].str();
     }
   }
@@ -775,10 +773,10 @@ void load_weights(const char *directory) {
   // open folder & extract files
   ddIO folder_handle;
   folder_handle.open(directory, ddIOflag::DIRECTORY);
-  dd_array<cbuff<512>> unfiltered = folder_handle.get_directory_files();
+  dd_array<string512> unfiltered = folder_handle.get_directory_files();
 
   // check if file contains .csv
-  DD_FOREACH(cbuff<512>, file, unfiltered) {
+  DD_FOREACH(string512, file, unfiltered) {
     // load up matching files
     if (file.ptr->contains(".csv") && file.ptr->contains("canon")) {
       // canonical
@@ -793,10 +791,10 @@ void load_biases(const char *directory) {
   // open folder & extract files
   ddIO folder_handle;
   folder_handle.open(directory, ddIOflag::DIRECTORY);
-  dd_array<cbuff<512>> unfiltered = folder_handle.get_directory_files();
+  dd_array<string512> unfiltered = folder_handle.get_directory_files();
 
   // check if file contains .csv
-  DD_FOREACH(cbuff<512>, file, unfiltered) {
+  DD_FOREACH(string512, file, unfiltered) {
     // load up matching files
     if (file.ptr->contains(".csv") && file.ptr->contains("canon")) {
       // canonical
